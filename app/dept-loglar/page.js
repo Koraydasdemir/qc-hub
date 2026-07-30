@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import Ust from "../../components/Ust";
 
@@ -8,8 +8,7 @@ const bugun = () => new Date().toISOString().slice(0, 10);
 
 export default function DeptLoglar() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const hedefDept = searchParams.get("dept");
+  const [hedefDept, setHedefDept] = useState(null);
   const [yukle, setYukle] = useState(true);
   const [yetkili, setYetkili] = useState(false);
   const [me, setMe] = useState(null);
@@ -35,6 +34,12 @@ export default function DeptLoglar() {
       if (!prof?.admin && !sorumluMu) { setYukle(false); return; }
       setYetkili(true); await yukleVeri(); setYukle(false);
     })();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    setHedefDept(params.get("dept"));
   }, []);
 
   useEffect(() => {
