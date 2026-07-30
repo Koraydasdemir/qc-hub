@@ -75,14 +75,17 @@ export default function Analytics() {
         <h3 style={{ margin: '0 0 16px 0' }}>📈 Son 7 Gün</h3>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', height: '150px' }}>
           {[65, 78, 82, 75, 88, 92, 87].map((val, idx) => (
-            <div key={idx} style={{
-              flex: 1,
-              height: `${val}px`,
-              background: '#3b82f6',
-              borderRadius: '4px 4px 0 0',
-              opacity: 0.7 + idx * 0.05,
-              title: `Gün ${idx + 1}: ${val}%`
-            }} />
+            <div
+              key={idx}
+              title={`Gün ${idx + 1}: ${val}%`}
+              style={{
+                flex: 1,
+                height: `${val}px`,
+                background: '#3b82f6',
+                borderRadius: '4px 4px 0 0',
+                opacity: 0.7 + idx * 0.05,
+              }}
+            />
           ))}
         </div>
       </div>
