@@ -33,7 +33,7 @@ export default function Dashboard() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push("/login"); return; }
       const [{ data: pr }, { data: dy }, { data: bg }, { data: prof }, { data: dep }, { data: lg }, { data: kat }] = await Promise.all([
-        supabase.from("projects").select("kod,ad,spec_no,asama,bedel,suppliers(kod,ad)").order("id"),
+        supabase.from("projects").select("kod,ad,spec_no,asama,bedel,katalog_id,suppliers(kod,ad)").order("id"),
         supabase.from("announcements").select("*").order("onemli",{ascending:false}).order("id",{ascending:false}),
         supabase.from("documents").select("kod,tur,tespit_eden,durum,created_at").order("id",{ascending:false}).limit(8),
         supabase.from("profiles").select("admin,dept_kod,ad_soyad").eq("id", session.user.id).single(),
@@ -62,7 +62,7 @@ export default function Dashboard() {
     if (!secSpec) return;
     const row = specSecenekleri.find(k => String(k.id) === String(secSpec));
     if (!row) return;
-    const proje = projeler.find(p => p.spec_no === row.spec_no);
+    const proje = projeler.find(p => p.katalog_id === row.id);
     router.push(proje ? "/spec/"+proje.kod : "/katalog/"+row.id);
   }
 

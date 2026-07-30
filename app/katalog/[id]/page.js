@@ -17,8 +17,8 @@ export default function KatalogDetay({ params }) {
       if (!session) { router.push("/login"); return; }
       const { data } = await supabase.from("specs_katalog").select("*").eq("id", id).single();
       setR(data || null);
-      if (data?.spec_no) {
-        const { data: projs } = await supabase.from("projects").select("kod").eq("spec_no", data.spec_no).limit(1);
+      if (data?.id) {
+        const { data: projs } = await supabase.from("projects").select("kod").eq("katalog_id", data.id).limit(1);
         if (projs && projs[0]?.kod) setProjeVarMi(projs[0].kod);
       }
       setYukle(false);
