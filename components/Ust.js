@@ -83,9 +83,10 @@ export default function Ust() {
           background: transparent;
           border: none;
           border-right: 1px solid rgba(255, 255, 255, 0.18);
-          color: #dbe8fb;
-          font-size: 12.5px;
-          padding: 9px 10px;
+          color: #eaf2ff;
+          font-size: 14px;
+          font-weight: 600;
+          padding: 10px 10px;
           cursor: pointer;
           white-space: nowrap;
           text-align: center;
