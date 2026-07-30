@@ -6,6 +6,7 @@ import Ust from "../../components/Ust";
 
 const RENK = { Active:{b:"#e4f4ee",c:"#0f7a5f"}, Hold:{b:"#fbf0dc",c:"#a9721a"}, Closed:{b:"#eef1f6",c:"#8b94a4"} };
 const DURUMLAR = ["Active","Hold","Closed"];
+const SONRAKI = { Active:"Hold", Hold:"Closed", Closed:"Active" };
 const bos = { supplier:"", topic:"", ncr:"", durum:"Active", ozet:"", son_durum:"", kapali:false };
 
 export default function AcikKonular() {
@@ -56,6 +57,24 @@ export default function AcikKonular() {
     else { ({ error } = await supabase.from("open_issues").update(kayit).eq("id", duzenle)); }
     if (error) { setMesaj("Hata: " + error.message); return; }
     iptal(); await yukleVeri();
+  }
+
+  async function durumDegistir(r) {
+    const yeni = SONRAKI[r.durum] || "Active";
+    const { error } = await supabase.from("open_issues").update({ durum: yeni, kapali: yeni==="Closed" }).eq("id", r.id);
+    if (!error) await yukleVeri();
+  }
+
+  async function dosyaYukle(r, file) {
+    if (!file) return;
+    setMesaj("Yükleniyor...");
+    const path = r.id + "_" + Date.now() + "_" + file.name.replace(/[^\w.\-]/g,"_");
+    const { error: upErr } = await supabase.storage.from("acik-konu-belge").upload(path, file, { upsert:false });
+    if (upErr) { setMesaj("Hata: " + upErr.message); return; }
+    const dosya_url = supabase.storage.from("acik-konu-belge").getPublicUrl(path).data.publicUrl;
+    const { error } = await supabase.from("open_issues").update({ dosya_url }).eq("id", r.id);
+    if (error) { setMesaj("Hata: " + error.message); return; }
+    setMesaj(""); await yukleVeri();
   }
 
   if (yukle) return <><Ust/><div className="wrap">Yükleniyor...</div></>;
@@ -120,18 +139,26 @@ export default function AcikKonular() {
 
         <section style={{padding:0,overflow:"hidden"}}>
           <table>
-            <thead><tr><th>Tedarikçi</th><th>Konu</th><th>NCR</th><th>Durum</th><th>Özet</th><th>Son durum</th><th></th></tr></thead>
+            <thead><tr><th>#</th><th>Tedarikçi</th><th>Konu</th><th>NCR</th><th>Durum</th><th>Özet</th><th>Son durum</th><th>Döküman</th><th></th></tr></thead>
             <tbody>
-              {gosterilen.map(r => {
+              {gosterilen.map((r,i) => {
                 const rk = RENK[r.durum] || RENK.Hold;
                 return (
                   <tr key={r.id}>
+                    <td style={{fontSize:12,color:"var(--ink3)"}}>{i+1}</td>
                     <td style={{whiteSpace:"nowrap",fontWeight:600,color:"var(--navy)"}}>{r.supplier || "—"}</td>
                     <td style={{maxWidth:160}}>{r.topic || "—"}</td>
                     <td style={{whiteSpace:"nowrap",fontSize:12}}>{r.ncr || "—"}</td>
-                    <td><span className="pill" style={{background:rk.b,color:rk.c}}>{r.durum || "—"}</span></td>
+                    <td><span className="pill" onClick={()=>durumDegistir(r)} title="Tıkla: durumu değiştir" style={{background:rk.b,color:rk.c,cursor:"pointer"}}>{r.durum || "—"}</span></td>
                     <td style={{maxWidth:260,fontSize:12.5}}>{r.ozet}</td>
                     <td style={{maxWidth:260,fontSize:12,color:"var(--ink2)"}}>{r.son_durum || ""}</td>
+                    <td style={{whiteSpace:"nowrap"}}>
+                      {r.dosya_url && <a href={r.dosya_url} target="_blank" rel="noreferrer" style={{marginRight:6}}>📎</a>}
+                      <label style={{cursor:"pointer",fontSize:11,color:"var(--steel)",textDecoration:"underline"}}>
+                        {r.dosya_url ? "değiştir" : "ekle"}
+                        <input type="file" style={{display:"none"}} onChange={e=>dosyaYukle(r, e.target.files[0])}/>
+                      </label>
+                    </td>
                     <td><button onClick={()=>baslaDuzenle(r)} style={{fontSize:12,color:"var(--steel)",background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>Düzenle</button></td>
                   </tr>
                 );

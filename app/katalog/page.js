@@ -31,6 +31,12 @@ export default function Katalog() {
   const tamamlanan = rows.filter(r => r.durum === "Completed").length;
   const bekleyen = rows.filter(r => r.durum !== "Completed").length;
 
+  async function bedelKaydet(r, deger) {
+    if (deger === (r.bedel||"")) return;
+    const { error } = await supabase.from("specs_katalog").update({ bedel: deger || null }).eq("id", r.id);
+    if (!error) setRows(rows.map(x => x.id===r.id ? { ...x, bedel: deger } : x));
+  }
+
   if (yukle) return <><Ust/><div className="wrap">Yükleniyor...</div></>;
 
   return (
@@ -54,17 +60,21 @@ export default function Katalog() {
 
         <section style={{padding:0,overflow:"hidden"}}>
           <table>
-            <thead><tr><th>Tedarikçi</th><th>Spec No</th><th>Proje adı</th><th>Teslim şartı</th><th>Durum</th><th>Beklenen</th><th>Gerçek teslim</th></tr></thead>
+            <thead><tr><th>Tedarikçi</th><th>Spec No</th><th>Proje adı</th><th>Bedel</th><th>Teslim şartı</th><th>Durum</th><th>Beklenen</th><th>Gerçek teslim</th></tr></thead>
             <tbody>
               {gosterilen.map(r => (
-                <tr key={r.id} onClick={()=>router.push("/katalog/"+r.id)} style={{cursor:"pointer"}}>
-                  <td style={{whiteSpace:"nowrap",fontWeight:600,color:"var(--navy)"}}>{r.tedarikci || "—"}</td>
-                  <td style={{whiteSpace:"nowrap"}}>{r.spec_no || "—"}</td>
-                  <td style={{maxWidth:200}}>{r.proje_adi || "—"}</td>
-                  <td style={{maxWidth:180,fontSize:12}}>{r.teslim_sarti || "—"}</td>
-                  <td><span className="pill" style={{background: r.durum==="Completed"?"#e4f4ee":"#fbf0dc", color: r.durum==="Completed"?"#0f7a5f":"#a9721a"}}>{r.durum}</span></td>
-                  <td style={{fontSize:12,whiteSpace:"nowrap"}}>{r.beklenen_teslim || "—"}</td>
-                  <td style={{fontSize:12,whiteSpace:"nowrap"}}>{r.gercek_teslim || "—"}</td>
+                <tr key={r.id} style={{cursor:"pointer"}}>
+                  <td onClick={()=>router.push("/katalog/"+r.id)} style={{whiteSpace:"nowrap",fontWeight:600,color:"var(--navy)"}}>{r.tedarikci || "—"}</td>
+                  <td onClick={()=>router.push("/katalog/"+r.id)} style={{whiteSpace:"nowrap"}}>{r.spec_no || "—"}</td>
+                  <td onClick={()=>router.push("/katalog/"+r.id)} style={{maxWidth:200}}>{r.proje_adi || "—"}</td>
+                  <td onClick={e=>e.stopPropagation()} style={{whiteSpace:"nowrap"}}>
+                    <input defaultValue={r.bedel||""} onBlur={e=>bedelKaydet(r,e.target.value)} placeholder="—"
+                      style={{width:90,fontSize:12,padding:"4px 6px",border:"1px solid #cbd3de",borderRadius:6}}/>
+                  </td>
+                  <td onClick={()=>router.push("/katalog/"+r.id)} style={{maxWidth:180,fontSize:12}}>{r.teslim_sarti || "—"}</td>
+                  <td onClick={()=>router.push("/katalog/"+r.id)}><span className="pill" style={{background: r.durum==="Completed"?"#e4f4ee":"#fbf0dc", color: r.durum==="Completed"?"#0f7a5f":"#a9721a"}}>{r.durum}</span></td>
+                  <td onClick={()=>router.push("/katalog/"+r.id)} style={{fontSize:12,whiteSpace:"nowrap"}}>{r.beklenen_teslim || "—"}</td>
+                  <td onClick={()=>router.push("/katalog/"+r.id)} style={{fontSize:12,whiteSpace:"nowrap"}}>{r.gercek_teslim || "—"}</td>
                 </tr>
               ))}
             </tbody>

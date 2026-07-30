@@ -91,11 +91,10 @@ export default function Dashboard() {
             <p style={{color:"var(--ink2)",fontSize:13,marginTop:0}}>Projeyi seçerek yaşam döngüsü, ödeme, ilerleme ve departman durumuna erişin.</p>
           </div>
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-            {admin && <a href="/onaylar" style={{background: bekleyen>0?"#b3261e":"#fff",color: bekleyen>0?"#fff":"#16304f",border:"1.5px solid "+(bekleyen>0?"#b3261e":"#cdd6e2"),padding:"11px 18px",borderRadius:11,fontWeight:600,fontSize:14}}>✓ Onaylar{bekleyen>0?" ("+bekleyen+")":""}</a>}
+            <a href="/onaylar" style={{background: bekleyen>0?"#b3261e":"#fff",color: bekleyen>0?"#fff":"#16304f",border:"1.5px solid "+(bekleyen>0?"#b3261e":"#cdd6e2"),padding:"11px 18px",borderRadius:11,fontWeight:600,fontSize:14}}>✓ Onaylar{bekleyen>0?" ("+bekleyen+")":""}</a>
             <a href="/acik-konular" style={{background:"#fff",color:"#16304f",border:"1.5px solid #cdd6e2",padding:"11px 18px",borderRadius:11,fontWeight:600,fontSize:14}}>📋 Açık Konular</a>
             <a href="/arsiv" style={{background:"#fff",color:"#16304f",border:"1.5px solid #cdd6e2",padding:"11px 18px",borderRadius:11,fontWeight:600,fontSize:14}}>📚 NCR Arşivi</a>
             <a href="/katalog" style={{background:"#fff",color:"#16304f",border:"1.5px solid #cdd6e2",padding:"11px 18px",borderRadius:11,fontWeight:600,fontSize:14}}>📄 Spec Kataloğu</a>
-            <a href="/mentor" style={{background:"#fff",color:"#16304f",border:"1.5px solid #cdd6e2",padding:"11px 18px",borderRadius:11,fontWeight:600,fontSize:14}}>🎓 Kalite Kontrol Mentörü</a>
             {(admin || (me?.dept_kod && me.dept_kod !== "08")) && <a href="/dept-loglar" style={{background:"#fff",color:"#16304f",border:"1.5px solid #cdd6e2",padding:"11px 18px",borderRadius:11,fontWeight:600,fontSize:14}}>🗂 Departman Logları</a>}
             <a href="/belge" style={{background:"#e08a3c",color:"#fff",padding:"12px 22px",borderRadius:11,fontWeight:600,fontSize:14,boxShadow:"0 4px 14px rgba(224,138,60,.35)"}}>+ Belge hazırla (NCR / DÖF)</a>
           </div>
@@ -115,9 +114,8 @@ export default function Dashboard() {
           </div>
         )}
 
-        <div className="buyuk" style={{background:"var(--card)",border:"1px solid var(--line)",boxShadow:"var(--shadow)",marginTop:16,
-          marginLeft:"calc(50% - 50vw)", marginRight:"calc(50% - 50vw)", borderRadius:0, padding:"24px 30px"}}>
-          <h2 style={{marginTop:0,fontSize:19,display:"flex",alignItems:"center",gap:9}}><span>🔎</span> Tedarikçi &amp; Spesifikasyon Seçimi</h2>
+        <div className="buyuk" style={{background:"var(--card)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:"28px 30px",boxShadow:"var(--shadow)",marginTop:16}}>
+          <h2 style={{marginTop:0,fontSize:19}}>Tedarikçi &amp; Spesifikasyon Seçimi</h2>
           <p style={{fontSize:13.5,color:"var(--ink2)",marginTop:-4}}>Sistemin giriş noktası — {katalog.length} spesifikasyonun tamamı burada. Tedarikçiyi ve spesifikasyonu seçerek ilgili ekrana geçin.</p>
           <div style={{display:"flex",gap:18,flexWrap:"wrap",alignItems:"flex-end",marginTop:10}}>
             <div style={{flex:1,minWidth:220}}>
@@ -162,6 +160,7 @@ export default function Dashboard() {
             {Object.values(deptGrup).map(({dep, loglar: dl}) => (
               <div key={dep.kod} className="dept">
                 <b style={{display:"block",fontSize:13.5,color:"var(--navy)",marginBottom:6}}>{dep.kod} · {dep.ad}</b>
+                {dep.kod === "01" && <a href="/mentor" style={{display:"inline-block",fontSize:12,marginBottom:8,color:"var(--steel)"}}>🎓 Kalite Kontrol Mentörü →</a>}
                 {dl.length === 0 && <span style={{fontSize:12,color:"var(--ink3)"}}>log yok</span>}
                 {dl.map(l => {
                   const bayat = l.guncelleme_tarihi && new Date(l.guncelleme_tarihi) < pzt;

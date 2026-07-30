@@ -466,7 +466,7 @@ export default function Spec({ params }) {
         <div style={{fontSize:13,color:"var(--ink2)"}}>Spec {p.spec_no} · aşama: {p.asama} {p.bedel?"· "+p.bedel:""}</div>
         {mesaj && <div style={{marginTop:8,fontSize:13,color: mesaj.startsWith("Hata")?"#b3261e":"var(--ink2)"}}>{mesaj}</div>}
 
-        <section style={{marginTop:16, marginLeft:"calc(50% - 50vw)", marginRight:"calc(50% - 50vw)", borderRadius:0, padding:"18px 30px"}}>
+        <section style={{marginTop:16}}>
           <div onClick={()=>secToggle("isAkisi")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
             <h2 style={{margin:0}}>İş akışı</h2>
             <span style={{fontSize:13,color:"var(--ink3)"}}>{secAcik.isAkisi ? "▲ Kapat" : "▼ Aç"}</span>

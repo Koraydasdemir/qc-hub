@@ -48,6 +48,7 @@ export default function KatalogDetay({ params }) {
             <div className="h">Tedarikçi</div><div className="v">{r.tedarikci || "—"}</div>
             <div className="h">Spec No</div><div className="v">{r.spec_no || "—"}</div>
             <div className="h">Proje adı</div><div className="v">{r.proje_adi || "—"}</div>
+            <div className="h">Bedel</div><div className="v">{r.bedel || "—"}</div>
             <div className="h">Avans</div><div className="v">{r.avans || "—"}</div>
             <div className="h">Teslim şartı</div><div className="v">{r.teslim_sarti || "—"}</div>
             <div className="h">Durum</div><div className="v">
