@@ -84,6 +84,8 @@ export default function Spec({ params }) {
   const [ncrForm, setNcrForm] = useState({});
   const [wEdits, setWEdits] = useState({});
   const [atamaAcikKat, setAtamaAcikKat] = useState(null);
+  const [secAcik, setSecAcik] = useState({ isAkisi:true, roadmap:true, uretim:true, departman:true, kritik:true });
+  function secToggle(k) { setSecAcik({ ...secAcik, [k]: !secAcik[k] }); }
 
   const bosOdemeler = () => ([
     { name: "Advance Payment", amount: "", paid: false },
@@ -465,7 +467,11 @@ export default function Spec({ params }) {
         {mesaj && <div style={{marginTop:8,fontSize:13,color: mesaj.startsWith("Hata")?"#b3261e":"var(--ink2)"}}>{mesaj}</div>}
 
         <section style={{marginTop:16, marginLeft:"calc(50% - 50vw)", marginRight:"calc(50% - 50vw)", borderRadius:0, padding:"18px 30px"}}>
-          <h2 style={{margin:0}}>İş akışı</h2>
+          <div onClick={()=>secToggle("isAkisi")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
+            <h2 style={{margin:0}}>İş akışı</h2>
+            <span style={{fontSize:13,color:"var(--ink3)"}}>{secAcik.isAkisi ? "▲ Kapat" : "▼ Aç"}</span>
+          </div>
+          {secAcik.isAkisi && <div style={{zoom:0.95}}>
           <p style={{fontSize:12,color:"var(--ink3)",margin:"4px 0 0"}}>Her kategori kartının üstünde o kategoriden sorumlu kişi(ler) görünür — atamak için 👤 simgesine tıklayın (yalnızca admin).</p>
 
           {me?.admin && proposals.length>0 && (
@@ -545,6 +551,7 @@ export default function Spec({ params }) {
             })}
           </div>
           <div style={{fontSize:11,color:"var(--ink3)",marginTop:8}}>gri = veri yok · yeşil = tamam · kırmızı (yanıp söner) = tıkanıklık · renk değiştirme: yalnızca Koray · veri girişi/dosya yükleme: Koray + o kategoriye atanan kişi · alt başlık ekleme/kaldırma önerileri Koray onayına düşer</div>
+          </div>}
           <style jsx>{`
             .blink { animation: blinkAnim 1s infinite; }
             @keyframes blinkAnim { 0%,100%{opacity:1;} 50%{opacity:0.25;} }
@@ -553,45 +560,20 @@ export default function Spec({ params }) {
           `}</style>
         </section>
 
-        {alarmlar.length>0 && (
-          <section style={{marginTop:16,border:"1px solid #d1352b",borderRadius:12,padding:14,background:"#fff5f4"}}>
-            <h2 style={{margin:0,color:"#b3261e"}}>⚠ Kritik konular / Uyarılar</h2>
-            <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:10}}>
-              {alarmlar.map(a => (
-                <div key={a.id} className="alarm-blink" style={{display:"flex",alignItems:"center",gap:10,fontSize:13.5}}>
-                  <span style={{flex:1}}>{a.metin}</span>
-                  <span style={{fontSize:11,color:"#8b3a34"}}>{a.giren}{a.tarih?" · "+a.tarih:""}</span>
-                  {alarmKaldirYetkili(a) && (
-                    <button onClick={()=>alarmKaldir(a)} style={{border:"1px solid #f0b9b5",color:"#b3261e",borderRadius:8,background:"#fff",cursor:"pointer",padding:"3px 9px",fontSize:11}}>Kapat</button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {yetkiliMi && (
-          <section style={{marginTop:16}}>
-            <h2 style={{margin:0}}>Kritik konu ekle</h2>
-            <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
-              <input value={yeniAlarm} onChange={e=>setYeniAlarm(e.target.value)} placeholder="Uyarı / kritik konu yazın..."
-                onKeyDown={e=>{if(e.key==="Enter")alarmEkle();}}
-                style={{flex:1,minWidth:220,padding:"9px 12px",border:"1px solid #cbd3de",borderRadius:10,fontSize:13.5}}/>
-              <button onClick={alarmEkle} className="arac-btn" style={{fontSize:13.5,padding:"9px 20px",background:"#b3261e"}}>+ Ekle</button>
-            </div>
-          </section>
-        )}
-
         <section style={{marginTop:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div onClick={()=>secToggle("roadmap")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
             <h2 style={{margin:0}}>Project Roadmap</h2>
-            {me?.admin && (
-              <button className="arac-btn" style={{fontSize:12.5,padding:"7px 14px"}}
-                onClick={()=> rEdit ? setREdit(false) : setREdit(true)}>
-                {rEdit ? "İptal" : "Düzenle"}
-              </button>
-            )}
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              {me?.admin && (
+                <button className="arac-btn" style={{fontSize:12.5,padding:"7px 14px"}}
+                  onClick={(e)=>{ e.stopPropagation(); rEdit ? setREdit(false) : setREdit(true); }}>
+                  {rEdit ? "İptal" : "Düzenle"}
+                </button>
+              )}
+              <span style={{fontSize:13,color:"var(--ink3)"}}>{secAcik.roadmap ? "▲" : "▼"}</span>
+            </div>
           </div>
+          {secAcik.roadmap && <>
 
           {!rEdit && (
             <div className="grid" style={{marginTop:10}}>
@@ -683,60 +665,65 @@ export default function Spec({ params }) {
               </div>
             </div>
           )}
+
+          {ekip.length>0 && (
+            <div style={{marginTop:20,borderTop:"1px solid var(--line)",paddingTop:16}}>
+              <h2 style={{marginTop:0}}>Üretim / İmalat</h2>
+              <div style={{overflowX:"auto"}}>
+                <table>
+                  <thead><tr><th>Ekipman</th>{asamalar.map(a=><th key={a} style={{textAlign:"center",fontSize:11}}>{a}</th>)}</tr></thead>
+                  <tbody>
+                    {ekip.map(e => (
+                      <tr key={e.id}>
+                        <td>{e.ad}</td>
+                        {asamalar.map(a => {
+                          const d = (ilerleme[e.id]||{})[a];
+                          return <td key={a} style={{textAlign:"center",
+                            background:d==="tamam"?"var(--okbg)":d==="devam"?"var(--warnbg)":"transparent",
+                            color:d==="tamam"?"var(--ok)":d==="devam"?"var(--warn)":"#ccc",fontWeight:600}}>
+                            {d==="tamam"?"✓":d==="devam"?"◑":"·"}</td>;
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{marginTop:14,borderTop:"1px solid var(--line)",paddingTop:12,display:"flex",gap:20,flexWrap:"wrap"}}>
+                <div style={{flex:1,minWidth:220}}>
+                  <b style={{fontSize:12.5,color:"var(--navy)"}}>Son Progress Report</b>
+                  {wItems["kalite_progress"]?.file_url ? (
+                    <div style={{marginTop:6,fontSize:12.5}}>
+                      <a href={wItems["kalite_progress"].file_url} target="_blank" rel="noreferrer">📎 Raporu görüntüle</a>
+                      <span style={{color:"var(--ink3)",marginLeft:8}}>{wItems["kalite_progress"].file_tarih}</span>
+                      {(!wItems["kalite_progress"].file_tarih || new Date(wItems["kalite_progress"].file_tarih) < pzt) &&
+                        <div style={{color:"#b3261e",fontWeight:600,marginTop:2}}>Güncel değil</div>}
+                    </div>
+                  ) : <div style={{fontSize:12,color:"var(--ink3)",marginTop:6}}>Henüz rapor yüklenmedi</div>}
+                </div>
+                <div style={{flex:1,minWidth:220}}>
+                  <b style={{fontSize:12.5,color:"var(--navy)"}}>Observation Report</b>
+                  {wItems["kalite_obs"]?.file_url ? (
+                    <div style={{marginTop:6,fontSize:12.5}}>
+                      <a href={wItems["kalite_obs"].file_url} target="_blank" rel="noreferrer">📎 Raporu görüntüle</a>
+                      <span style={{color:"var(--ink3)",marginLeft:8}}>{wItems["kalite_obs"].file_tarih}</span>
+                      {(!wItems["kalite_obs"].file_tarih || new Date(wItems["kalite_obs"].file_tarih) < pzt) &&
+                        <div style={{color:"#b3261e",fontWeight:600,marginTop:2}}>Güncel değil</div>}
+                    </div>
+                  ) : <div style={{fontSize:12,color:"var(--ink3)",marginTop:6}}>Henüz rapor yüklenmedi</div>}
+                </div>
+              </div>
+            </div>
+          )}
+          </>}
         </section>
 
-        {ekip.length>0 && (
-          <section>
-            <h2>Ekipman ilerlemesi</h2>
-            <div style={{overflowX:"auto"}}>
-              <table>
-                <thead><tr><th>Ekipman</th>{asamalar.map(a=><th key={a} style={{textAlign:"center",fontSize:11}}>{a}</th>)}</tr></thead>
-                <tbody>
-                  {ekip.map(e => (
-                    <tr key={e.id}>
-                      <td>{e.ad}</td>
-                      {asamalar.map(a => {
-                        const d = (ilerleme[e.id]||{})[a];
-                        return <td key={a} style={{textAlign:"center",
-                          background:d==="tamam"?"var(--okbg)":d==="devam"?"var(--warnbg)":"transparent",
-                          color:d==="tamam"?"var(--ok)":d==="devam"?"var(--warn)":"#ccc",fontWeight:600}}>
-                          {d==="tamam"?"✓":d==="devam"?"◑":"·"}</td>;
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div style={{marginTop:14,borderTop:"1px solid var(--line)",paddingTop:12,display:"flex",gap:20,flexWrap:"wrap"}}>
-              <div style={{flex:1,minWidth:220}}>
-                <b style={{fontSize:12.5,color:"var(--navy)"}}>Son Progress Report</b>
-                {wItems["kalite_progress"]?.file_url ? (
-                  <div style={{marginTop:6,fontSize:12.5}}>
-                    <a href={wItems["kalite_progress"].file_url} target="_blank" rel="noreferrer">📎 Raporu görüntüle</a>
-                    <span style={{color:"var(--ink3)",marginLeft:8}}>{wItems["kalite_progress"].file_tarih}</span>
-                    {(!wItems["kalite_progress"].file_tarih || new Date(wItems["kalite_progress"].file_tarih) < pzt) &&
-                      <div style={{color:"#b3261e",fontWeight:600,marginTop:2}}>Güncel değil</div>}
-                  </div>
-                ) : <div style={{fontSize:12,color:"var(--ink3)",marginTop:6}}>Henüz rapor yüklenmedi</div>}
-              </div>
-              <div style={{flex:1,minWidth:220}}>
-                <b style={{fontSize:12.5,color:"var(--navy)"}}>Observation Report</b>
-                {wItems["kalite_obs"]?.file_url ? (
-                  <div style={{marginTop:6,fontSize:12.5}}>
-                    <a href={wItems["kalite_obs"].file_url} target="_blank" rel="noreferrer">📎 Raporu görüntüle</a>
-                    <span style={{color:"var(--ink3)",marginLeft:8}}>{wItems["kalite_obs"].file_tarih}</span>
-                    {(!wItems["kalite_obs"].file_tarih || new Date(wItems["kalite_obs"].file_tarih) < pzt) &&
-                      <div style={{color:"#b3261e",fontWeight:600,marginTop:2}}>Güncel değil</div>}
-                  </div>
-                ) : <div style={{fontSize:12,color:"var(--ink3)",marginTop:6}}>Henüz rapor yüklenmedi</div>}
-              </div>
-            </div>
-          </section>
-        )}
-
         <section>
-          <h2>Departman durumu</h2>
-          <div className="grid">
+          <div onClick={()=>secToggle("departman")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+            <h2 style={{margin:0}}>Departman durumu</h2>
+            <span style={{fontSize:13,color:"var(--ink3)"}}>{secAcik.departman ? "▲" : "▼"}</span>
+          </div>
+          {secAcik.departman && <>
+          <div className="grid" style={{marginTop:10}}>
             {Object.keys(konuGrup).sort().map(dk => (
               <div key={dk} className="dept">
                 <b>{dk} · {DEPT_AD[dk]}</b>
@@ -769,6 +756,42 @@ export default function Spec({ params }) {
             </div>
             <div style={{fontSize:11,color:"var(--ink3)",marginTop:6}}>Sadece kendi departmanınıza ekleyebilirsiniz{me?.admin?" (admin: tümü)":""}. Eklenen konuya tıklayınca tamam/açık olur.</div>
           </div>
+          </>}
+        </section>
+
+        <section style={{marginTop:16, border: alarmlar.length>0 ? "1px solid #d1352b" : undefined, background: alarmlar.length>0 ? "#fff5f4" : undefined}}>
+          <div onClick={()=>secToggle("kritik")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+            <h2 style={{margin:0,color: alarmlar.length>0 ? "#b3261e" : undefined}}>⚠ Kritik konular / Uyarılar</h2>
+            <span style={{fontSize:13,color:"var(--ink3)"}}>{secAcik.kritik ? "▲" : "▼"}</span>
+          </div>
+          {secAcik.kritik && <>
+          {alarmlar.length>0 ? (
+            <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:10}}>
+              {alarmlar.map(a => (
+                <div key={a.id} className="alarm-blink" style={{display:"flex",alignItems:"center",gap:10,fontSize:13.5}}>
+                  <span style={{flex:1}}>{a.metin}</span>
+                  <span style={{fontSize:11,color:"#8b3a34"}}>{a.giren}{a.tarih?" · "+a.tarih:""}</span>
+                  {alarmKaldirYetkili(a) && (
+                    <button onClick={()=>alarmKaldir(a)} style={{border:"1px solid #f0b9b5",color:"#b3261e",borderRadius:8,background:"#fff",cursor:"pointer",padding:"3px 9px",fontSize:11}}>Kapat</button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : <div style={{fontSize:12.5,color:"var(--ink3)",marginTop:8}}>Aktif kritik konu / uyarı yok.</div>}
+
+          {yetkiliMi && (
+            <div style={{display:"flex",gap:8,marginTop:14,borderTop:"1px solid var(--line)",paddingTop:12,flexWrap:"wrap"}}>
+              <input value={yeniAlarm} onChange={e=>setYeniAlarm(e.target.value)} placeholder="Uyarı / kritik konu yazın..."
+                onKeyDown={e=>{if(e.key==="Enter")alarmEkle();}}
+                style={{flex:1,minWidth:220,padding:"9px 12px",border:"1px solid #cbd3de",borderRadius:10,fontSize:13.5}}/>
+              <button onClick={alarmEkle} className="arac-btn" style={{fontSize:13.5,padding:"9px 20px",background:"#b3261e"}}>+ Ekle</button>
+            </div>
+          )}
+          <style jsx>{`
+            .alarm-blink { animation: rowBlink2 1.4s infinite; }
+            @keyframes rowBlink2 { 0%,100%{opacity:1;} 50%{opacity:0.55;} }
+          `}</style>
+          </>}
         </section>
       </div>
     </>

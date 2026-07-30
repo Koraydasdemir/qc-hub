@@ -115,8 +115,9 @@ export default function Dashboard() {
           </div>
         )}
 
-        <div className="buyuk" style={{background:"var(--card)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:"28px 30px",boxShadow:"var(--shadow)",marginTop:16}}>
-          <h2 style={{marginTop:0,fontSize:19}}>Tedarikçi &amp; Spesifikasyon Seçimi</h2>
+        <div className="buyuk" style={{background:"var(--card)",border:"1px solid var(--line)",boxShadow:"var(--shadow)",marginTop:16,
+          marginLeft:"calc(50% - 50vw)", marginRight:"calc(50% - 50vw)", borderRadius:0, padding:"24px 30px"}}>
+          <h2 style={{marginTop:0,fontSize:19,display:"flex",alignItems:"center",gap:9}}><span>🔎</span> Tedarikçi &amp; Spesifikasyon Seçimi</h2>
           <p style={{fontSize:13.5,color:"var(--ink2)",marginTop:-4}}>Sistemin giriş noktası — {katalog.length} spesifikasyonun tamamı burada. Tedarikçiyi ve spesifikasyonu seçerek ilgili ekrana geçin.</p>
           <div style={{display:"flex",gap:18,flexWrap:"wrap",alignItems:"flex-end",marginTop:10}}>
             <div style={{flex:1,minWidth:220}}>
