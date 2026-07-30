@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import Ust from "../../components/Ust";
 
@@ -8,6 +8,8 @@ const bugun = () => new Date().toISOString().slice(0, 10);
 
 export default function DeptLoglar() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const hedefDept = searchParams.get("dept");
   const [yukle, setYukle] = useState(true);
   const [yetkili, setYetkili] = useState(false);
   const [me, setMe] = useState(null);
@@ -34,6 +36,12 @@ export default function DeptLoglar() {
       setYetkili(true); await yukleVeri(); setYukle(false);
     })();
   }, []);
+
+  useEffect(() => {
+    if (!hedefDept || yukle) return;
+    const el = document.getElementById("dept-" + hedefDept);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [hedefDept, yukle]);
 
   async function dosyaYukle(dep, file) {
     if (!file) return;
@@ -82,8 +90,9 @@ export default function DeptLoglar() {
         <div className="grid">
           {depler.filter(d => d.kod !== "08").filter(d => me?.admin || d.kod === me?.dept_kod).map(dep => {
             const dLog = loglar.filter(l => l.dept_kod === dep.kod);
+            const vurgulu = hedefDept === dep.kod;
             return (
-              <section key={dep.kod}>
+              <section key={dep.kod} id={"dept-" + dep.kod} style={vurgulu ? {outline:"2px solid #0d3f7a", outlineOffset:"4px", borderRadius:10} : undefined}>
                 <b style={{fontSize:13.5,color:"var(--navy)"}}>{dep.kod} · {dep.ad}</b>
                 <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:6}}>
                   {dLog.map(l => (
