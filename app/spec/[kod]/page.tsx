@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { getUserPermissions } from '@/lib/supabase/queries';
 import SpecHeader from '@/components/spec/SpecHeader';
 import ProjectRoadmap from '@/components/spec/ProjectRoadmap';
 import WorkflowStages from '@/components/spec/WorkflowStages';
@@ -18,28 +19,37 @@ export default function SpecDetailPage() {
   const params = useParams();
   const specId = params.kod as string;
   const [spec, setSpec] = useState<SpecData | null>(null);
+  const [userPermission, setUserPermission] = useState<'admin' | 'editor' | 'viewer'>('viewer');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
     if (!specId) return;
-    fetchSpecData();
+    fetchData();
   }, [specId]);
 
-  const fetchSpecData = async () => {
+  const fetchData = async () => {
     try {
-      const { data, error: err } = await supabase
+      // Spec verilerini çek
+      const { data: specData, error: specErr } = await supabase
         .from('projects')
         .select('*')
         .eq('kod', specId)
         .single();
 
-      if (err) throw err;
-      setSpec(data);
+      if (specErr) throw specErr;
+      setSpec(specData);
+
+      // Kullanıcı izinlerini çek
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user?.id) {
+        const permission = await getUserPermissions(userData.user.id, specId);
+        setUserPermission(permission as 'admin' | 'editor' | 'viewer');
+      }
     } catch (err: any) {
-      setError(err.message || 'Spec yüklenemedi');
-      console.error('Error fetching spec:', err);
+      setError(err.message || 'Veriler yüklenemedi');
+      console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
     }
@@ -81,13 +91,13 @@ export default function SpecDetailPage() {
       {/* Ana İçerik */}
       <div className="spec-content">
         {/* Project Roadmap Bileşeni */}
-        <ProjectRoadmap specId={specId} />
+        <ProjectRoadmap specId={specId} userPermission={userPermission} />
 
         {/* Workflow Stages Bileşeni */}
-        <WorkflowStages specId={specId} />
+        <WorkflowStages specId={specId} userPermission={userPermission} />
 
         {/* QA Tracking Bileşeni */}
-        <QATracking specId={specId} />
+        <QATracking specId={specId} userPermission={userPermission} />
       </div>
 
       {/* Dinamik CSS */}
