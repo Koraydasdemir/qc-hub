@@ -116,7 +116,7 @@ export default function Dashboard() {
         )}
 
         <div className="buyuk" style={{background:"var(--card)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:"28px 30px",boxShadow:"var(--shadow)",marginTop:16}}>
-          <h2 style={{marginTop:0,fontSize:19}}>🎯 Tedarikçi &amp; Spesifikasyon seçimi</h2>
+          <h2 style={{marginTop:0,fontSize:19}}>Tedarikçi &amp; Spesifikasyon Seçimi</h2>
           <p style={{fontSize:13.5,color:"var(--ink2)",marginTop:-4}}>Sistemin giriş noktası — {katalog.length} spesifikasyonun tamamı burada. Tedarikçiyi ve spesifikasyonu seçerek ilgili ekrana geçin.</p>
           <div style={{display:"flex",gap:18,flexWrap:"wrap",alignItems:"flex-end",marginTop:10}}>
             <div style={{flex:1,minWidth:220}}>
@@ -137,7 +137,7 @@ export default function Dashboard() {
             </div>
             <button className="arac-btn" disabled={!secSpec} onClick={specAc}
               style={{padding:"15px 28px",fontSize:15.5,opacity: secSpec?1:.5,cursor: secSpec?"pointer":"not-allowed"}}>
-              Spec ekranını aç →
+              Spesifikasyon detayları →
             </button>
           </div>
         </div>
