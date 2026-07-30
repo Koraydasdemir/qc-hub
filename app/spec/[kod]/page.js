@@ -8,14 +8,49 @@ const DEPT_AD = {"01":"Kalite Kontrol","02":"Finance","03":"Accounting","04":"Te
   "05":"Procurement","06":"Legal Affairs","07":"Logistics & Customs","08":"Administrative"};
 const bugun = () => new Date().toLocaleDateString("tr-TR");
 
+const WORKFLOW = [
+  { key: "sozlesme", ad: "Sözleşme", items: [
+    { key: "sozlesme_techmp_spec", ad: "TECHMP–Tedarikçi Spec No" },
+    { key: "sozlesme_isveren_spec", ad: "İşveren Spec No" },
+    { key: "sozlesme_durum", ad: "Durum (Checking / Under Signature / Approved)" },
+  ]},
+  { key: "finans", ad: "Finans", items: [
+    { key: "finans_advance", ad: "Advance Payment" },
+    { key: "finans_2nd", ad: "2nd Payment" },
+    { key: "finans_3rd", ad: "3rd Payment" },
+  ]},
+  { key: "proje", ad: "Proje", items: [
+    { key: "proje_manuf_draft", ad: "Manufacturing Progress Report Draft" },
+    { key: "proje_obs_draft", ad: "Observation Report Draft" },
+    { key: "proje_visit_cal", ad: "Visit Calendar" },
+    { key: "proje_spec_list", ad: "Specification Document List" },
+  ]},
+  { key: "kalite", ad: "Kalite Kontrol", items: [
+    { key: "kalite_itp", ad: "ITP" },
+    { key: "kalite_progress_haftalik", ad: "Haftalık Progress Report" },
+    { key: "kalite_obs_haftalik", ad: "Haftalık Observation Report" },
+    { key: "kalite_ncr_dof", ad: "NCR / DÖF Takip" },
+    { key: "kalite_tq", ad: "TQ Takip" },
+    { key: "kalite_ziyaret", ad: "Haftalık Ziyaret" },
+    { key: "kalite_fat", ad: "FAT (Punch list)" },
+    { key: "kalite_packing", ad: "Packing Durumu" },
+  ]},
+  { key: "disticaret", ad: "Dış Ticaret", items: [
+    { key: "dt_before", ad: "Teslimat Öncesi Organizasyon" },
+    { key: "dt_during", ad: "Teslimat Sırasında Organizasyon" },
+    { key: "dt_completed", ad: "Teslimat Sonrası (Tamamlanan)" },
+  ]},
+];
+const SONRAKI_DURUM = { grey: "green", green: "red", red: "grey" };
+const DURUM_RENK = { grey: "#c7cdd6", green: "var(--ok)", red: "#d1352b" };
+const DURUM_ETIKET = { grey: "Veri yok", green: "Tamam", red: "Tıkanıklık" };
+
 export default function Spec({ params }) {
   const router = useRouter();
   const kod = params.kod;
   const [yukle, setYukle] = useState(true);
   const [me, setMe] = useState(null);
   const [p, setP] = useState(null);
-  const [gates, setGates] = useState([]);
-  const [dongu, setDongu] = useState([]);
   const [ekip, setEkip] = useState([]);
   const [ilerleme, setIlerleme] = useState({});
   const [konular, setKonular] = useState([]);
@@ -26,6 +61,10 @@ export default function Spec({ params }) {
   const [rEdit, setREdit] = useState(false);
   const [rForm, setRForm] = useState(null);
   const [rKaydet, setRKaydet] = useState(false);
+  const [wItems, setWItems] = useState({});
+  const [acikKat, setAcikKat] = useState({ sozlesme: true, finans: true, proje: true, kalite: true, disticaret: true });
+  const [alarmlar, setAlarmlar] = useState([]);
+  const [yeniAlarm, setYeniAlarm] = useState("");
 
   const bosOdemeler = () => ([
     { name: "Advance Payment", amount: "", paid: false },
@@ -36,20 +75,24 @@ export default function Spec({ params }) {
   async function yukleVeri() {
     const { data: proje } = await supabase.from("projects").select("*,suppliers(kod,ad)").eq("kod", kod).single();
     if (!proje) { setYukle(false); return; }
-    const [g, l, e, t, r] = await Promise.all([
-      supabase.from("payment_gates").select("*").eq("project_id", proje.id).order("sira"),
-      supabase.from("lifecycle_stages").select("*").eq("project_id", proje.id).order("sira"),
+    const [e, t, r, w, al] = await Promise.all([
       supabase.from("equipment").select("*").eq("project_id", proje.id).order("id"),
       supabase.from("department_topics").select("*").eq("project_id", proje.id).order("dept_kod"),
       supabase.from("project_roadmap").select("*").eq("project_id", proje.id).maybeSingle(),
+      supabase.from("workflow_items").select("*").eq("project_id", proje.id),
+      supabase.from("critical_alerts").select("*").eq("project_id", proje.id).eq("aktif", true).order("created_at"),
     ]);
+    const wMap = {};
+    (w.data||[]).forEach(row => { wMap[row.item_key] = row; });
+    setWItems(wMap);
+    setAlarmlar(al.data||[]);
     const eqIds = (e.data||[]).map(x=>x.id);
     let prog = {};
     if (eqIds.length) {
       const { data: pr } = await supabase.from("equipment_progress").select("*").in("equipment_id", eqIds);
       (pr||[]).forEach(r => { (prog[r.equipment_id] = prog[r.equipment_id] || {})[r.asama] = r.durum; });
     }
-    setP(proje); setGates(g.data||[]); setDongu(l.data||[]); setEkip(e.data||[]);
+    setP(proje); setEkip(e.data||[]);
     setIlerleme(prog); setKonular(t.data||[]);
     const rm = r.data || null;
     setRoadmap(rm);
@@ -73,7 +116,6 @@ export default function Spec({ params }) {
   if (yukle) return <><Ust/><div className="wrap">Yükleniyor...</div></>;
   if (!p) return <><Ust/><div className="wrap"><a href="/">← Ana ekran</a><p>Proje bulunamadı.</p></div></>;
 
-  const finansMi = me && (me.admin || ["02","03"].includes(me.dept_kod));
   const asamalar = ["Satın alma","Döküm/Hammadde","İmalat","Talaşlı imalat","Boya/Son işlem","Hazır"];
   const konuGrup = {};
   konular.forEach(k => (konuGrup[k.dept_kod] = konuGrup[k.dept_kod] || []).push(k));
@@ -93,25 +135,6 @@ export default function Spec({ params }) {
     if (!yazabilirDept(k.dept_kod)) return;
     const yeni = k.durum === "tamam" ? "acik" : "tamam";
     const { error } = await supabase.from("department_topics").update({ durum: yeni }).eq("id", k.id);
-    if (!error) await yukleVeri();
-  }
-
-  async function dekontYukle(gate, file) {
-    if (!file) return;
-    setMesaj("Dekont yükleniyor...");
-    const path = p.kod + "/kapi" + gate.id + "_" + Date.now() + "_" + file.name.replace(/[^\w.\-]/g,"_");
-    const { error: upErr } = await supabase.storage.from("dekont").upload(path, file, { upsert:false });
-    if (upErr) { setMesaj("Hata: " + upErr.message); return; }
-    const { data: pub } = supabase.storage.from("dekont").getPublicUrl(path);
-    const { error } = await supabase.from("payment_gates").update({
-      dekont_url: pub.publicUrl, dekont_tarihi: bugun(), durum: "dekont yüklendi", acan: me.ad_soyad,
-    }).eq("id", gate.id);
-    if (error) { setMesaj("Hata: " + error.message); return; }
-    setMesaj(""); await yukleVeri();
-  }
-  async function kapiOnayla(gate) {
-    if (!me?.admin) return;
-    const { error } = await supabase.from("payment_gates").update({ durum: "açık", acilma_tarihi: bugun() }).eq("id", gate.id);
     if (!error) await yukleVeri();
   }
 
@@ -155,6 +178,34 @@ export default function Spec({ params }) {
     setMesaj(""); setREdit(false); await yukleVeri();
   }
 
+  async function durumDegistir(itemKey) {
+    if (!me?.admin) return;
+    const mevcut = wItems[itemKey]?.status || "grey";
+    const yeni = SONRAKI_DURUM[mevcut] || "grey";
+    const { error } = await supabase.from("workflow_items").upsert({
+      project_id: p.id, item_key: itemKey, status: yeni,
+      updated_at: new Date().toISOString(), updated_by: me?.ad_soyad || null,
+    }, { onConflict: "project_id,item_key" });
+    if (error) { setMesaj("Hata: " + error.message); return; }
+    await yukleVeri();
+  }
+  function katToggle(katKey) { setAcikKat({ ...acikKat, [katKey]: !acikKat[katKey] }); }
+
+  async function alarmEkle() {
+    if (!yeniAlarm.trim()) return;
+    const { error } = await supabase.from("critical_alerts").insert({
+      project_id: p.id, metin: yeniAlarm.trim(), giren: me?.ad_soyad || null, tarih: bugun(), aktif: true,
+    });
+    if (error) { setMesaj("Hata: " + error.message); return; }
+    setYeniAlarm(""); await yukleVeri();
+  }
+  async function alarmKaldir(a) {
+    const { error } = await supabase.from("critical_alerts").update({ aktif: false }).eq("id", a.id);
+    if (!error) await yukleVeri();
+  }
+  const alarmYetkili = me && (me.admin || true); // tüm departmanlar görebilir/ekleyebilir; kapatma yetkisi admin+giren kişide
+  const alarmKaldirYetkili = (a) => me && (me.admin || a.giren === me.ad_soyad);
+
   return (
     <>
       <Ust/>
@@ -164,17 +215,75 @@ export default function Spec({ params }) {
         <div style={{fontSize:13,color:"var(--ink2)"}}>Spec {p.spec_no} · aşama: {p.asama} {p.bedel?"· "+p.bedel:""}</div>
         {mesaj && <div style={{marginTop:8,fontSize:13,color: mesaj.startsWith("Hata")?"#b3261e":"var(--ink2)"}}>{mesaj}</div>}
 
+        {alarmlar.length>0 && (
+          <section style={{marginTop:16,border:"1px solid #d1352b",borderRadius:12,padding:14,background:"#fff5f4"}}>
+            <h2 style={{margin:0,color:"#b3261e"}}>⚠ Kritik konular / Uyarılar</h2>
+            <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:10}}>
+              {alarmlar.map(a => (
+                <div key={a.id} className="alarm-blink" style={{display:"flex",alignItems:"center",gap:10,fontSize:13.5}}>
+                  <span style={{flex:1}}>{a.metin}</span>
+                  <span style={{fontSize:11,color:"#8b3a34"}}>{a.giren}{a.tarih?" · "+a.tarih:""}</span>
+                  {alarmKaldirYetkili(a) && (
+                    <button onClick={()=>alarmKaldir(a)} style={{border:"1px solid #f0b9b5",color:"#b3261e",borderRadius:8,background:"#fff",cursor:"pointer",padding:"3px 9px",fontSize:11}}>Kapat</button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section style={{marginTop:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <h2 style={{margin:0}}>Kritik konu ekle</h2>
+          </div>
+          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
+            <input value={yeniAlarm} onChange={e=>setYeniAlarm(e.target.value)} placeholder="Uyarı / kritik konu yazın..."
+              onKeyDown={e=>{if(e.key==="Enter")alarmEkle();}}
+              style={{flex:1,minWidth:220,padding:"9px 12px",border:"1px solid #cbd3de",borderRadius:10,fontSize:13.5}}/>
+            <button onClick={alarmEkle} className="arac-btn" style={{fontSize:13.5,padding:"9px 20px",background:"#b3261e"}}>+ Ekle</button>
+          </div>
+        </section>
+
         <section style={{marginTop:16}}>
           <h2>İş akışı</h2>
-          <div className="yasam">
-            {dongu.map((a,i) => (
-              <span key={a.id} style={{display:"flex",alignItems:"center",gap:5}}>
-                <span className={"asm "+(a.durum||"")}>{a.ad}</span>
-                {i<dongu.length-1 && <span style={{color:"#c3c9d4"}}>›</span>}
-              </span>
+          <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:10}}>
+            {WORKFLOW.map(kat => (
+              <div key={kat.key} style={{border:"1px solid var(--line)",borderRadius:12,overflow:"hidden"}}>
+                <div onClick={()=>katToggle(kat.key)}
+                  style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:"#f4f6f9",cursor:"pointer"}}>
+                  <b style={{fontSize:14}}>{kat.ad}</b>
+                  <span style={{fontSize:12,color:"var(--ink3)"}}>{acikKat[kat.key] ? "▲ Kapat" : "▼ Aç"}</span>
+                </div>
+                {acikKat[kat.key] && (
+                  <div style={{padding:"10px 14px",display:"flex",flexDirection:"column",gap:8}}>
+                    {kat.items.map(it => {
+                      const durum = wItems[it.key]?.status || "grey";
+                      return (
+                        <div key={it.key} style={{display:"flex",alignItems:"center",gap:10,fontSize:13}}>
+                          <span
+                            onClick={()=>durumDegistir(it.key)}
+                            className={durum==="red" ? "durum-nokta blink" : "durum-nokta"}
+                            title={me?.admin ? "Tıkla: durumu değiştir" : DURUM_ETIKET[durum]}
+                            style={{width:12,height:12,borderRadius:"50%",background:DURUM_RENK[durum],
+                              cursor: me?.admin ? "pointer" : "default", flexShrink:0}}
+                          />
+                          <span style={{flex:1}}>{it.ad}</span>
+                          <span style={{fontSize:11,color:"var(--ink3)"}}>{DURUM_ETIKET[durum]}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
-          <div style={{fontSize:11,color:"var(--ink3)",marginTop:4}}>yeşil = tamam · sarı = devam · kırmızı (yanıp söner) = tıkanıklık</div>
+          <div style={{fontSize:11,color:"var(--ink3)",marginTop:8}}>gri = veri yok · yeşil = tamam · kırmızı (yanıp söner) = tıkanıklık · admin noktaya tıklayarak durumu değiştirebilir</div>
+          <style jsx>{`
+            .blink { animation: blinkAnim 1s infinite; }
+            @keyframes blinkAnim { 0%,100%{opacity:1;} 50%{opacity:0.25;} }
+            .alarm-blink { animation: rowBlink 1.4s infinite; }
+            @keyframes rowBlink { 0%,100%{opacity:1;} 50%{opacity:0.55;} }
+          `}</style>
         </section>
 
         <section style={{marginTop:16}}>
@@ -278,36 +387,6 @@ export default function Spec({ params }) {
               </div>
             </div>
           )}
-        </section>
-
-        <section>
-          <h2>Ödeme kapıları</h2>
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {gates.map(g => {
-              const st = g.durum==="açık" ? {background:"var(--okbg)",color:"var(--ok)"}
-                : g.durum==="dekont yüklendi" ? {background:"var(--warnbg)",color:"var(--warn)"}
-                : {background:"#edeff3",color:"#8b94a4"};
-              return (
-                <div key={g.id} style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",borderBottom:"1px solid var(--line)",paddingBottom:10}}>
-                  <span className="pill" style={{...st}}>{g.ad} — {g.durum}</span>
-                  {g.dekont_url && <a href={g.dekont_url} target="_blank" rel="noreferrer" style={{fontSize:12.5}}>📎 dekont {g.dekont_tarihi?"("+g.dekont_tarihi+")":""}</a>}
-                  {g.acan && <span style={{fontSize:12,color:"var(--ink3)"}}>yükleyen: {g.acan}</span>}
-                  {g.durum==="açık" && g.acilma_tarihi && <span style={{fontSize:12,color:"var(--ok)"}}>onay: {g.acilma_tarihi}</span>}
-                  <span style={{flex:1}}></span>
-                  {finansMi && g.durum==="bekliyor" && (
-                    <label className="arac-btn" style={{cursor:"pointer",fontSize:13,padding:"8px 16px"}}>
-                      Dekont yükle
-                      <input type="file" style={{display:"none"}} onChange={e=>dekontYukle(g, e.target.files[0])}/>
-                    </label>
-                  )}
-                  {me?.admin && g.durum==="dekont yüklendi" && (
-                    <button onClick={()=>kapiOnayla(g)} className="arac-btn" style={{background:"#0f7a5f",fontSize:13,padding:"8px 16px"}}>✓ Onayla (kapıyı aç)</button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <div style={{fontSize:11,color:"var(--ink3)",marginTop:8}}>Dekont yükleme: Finans/Muhasebe & admin · Onay: yalnızca admin</div>
         </section>
 
         {ekip.length>0 && (
