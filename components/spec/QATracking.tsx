@@ -14,9 +14,10 @@ interface QAAlert {
 
 interface QATrackingProps {
   specId: string;
+  userPermission?: 'admin' | 'editor' | 'viewer';
 }
 
-export default function QATracking({ specId }: QATrackingProps) {
+export default function QATracking({ specId, userPermission }: QATrackingProps) {
   const [alerts, setAlerts] = useState<QAAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();

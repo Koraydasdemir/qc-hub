@@ -19,11 +19,12 @@ interface WorkflowStageData {
 
 interface WorkflowStagesProps {
   specId: string;
+  userPermission?: 'admin' | 'editor' | 'viewer';
 }
 
 const STAGES = ['Technical Queries', 'FAT', 'Packing', 'External Trade', 'Completed'];
 
-export default function WorkflowStages({ specId }: WorkflowStagesProps) {
+export default function WorkflowStages({ specId, userPermission }: WorkflowStagesProps) {
   const [stages, setStages] = useState<Record<string, WorkflowStageData>>({});
   const [loading, setLoading] = useState(true);
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
