@@ -22,15 +22,26 @@ export default function Spec({ params }) {
   const [yeniKonu, setYeniKonu] = useState("");
   const [yeniDept, setYeniDept] = useState("");
   const [mesaj, setMesaj] = useState("");
+  const [roadmap, setRoadmap] = useState(null);
+  const [rEdit, setREdit] = useState(false);
+  const [rForm, setRForm] = useState(null);
+  const [rKaydet, setRKaydet] = useState(false);
+
+  const bosOdemeler = () => ([
+    { name: "Advance Payment", amount: "", paid: false },
+    { name: "2nd Payment", amount: "", paid: false },
+    { name: "3rd Payment", amount: "", paid: false },
+  ]);
 
   async function yukleVeri() {
     const { data: proje } = await supabase.from("projects").select("*,suppliers(kod,ad)").eq("kod", kod).single();
     if (!proje) { setYukle(false); return; }
-    const [g, l, e, t] = await Promise.all([
+    const [g, l, e, t, r] = await Promise.all([
       supabase.from("payment_gates").select("*").eq("project_id", proje.id).order("sira"),
       supabase.from("lifecycle_stages").select("*").eq("project_id", proje.id).order("sira"),
       supabase.from("equipment").select("*").eq("project_id", proje.id).order("id"),
       supabase.from("department_topics").select("*").eq("project_id", proje.id).order("dept_kod"),
+      supabase.from("project_roadmap").select("*").eq("project_id", proje.id).maybeSingle(),
     ]);
     const eqIds = (e.data||[]).map(x=>x.id);
     let prog = {};
@@ -40,6 +51,12 @@ export default function Spec({ params }) {
     }
     setP(proje); setGates(g.data||[]); setDongu(l.data||[]); setEkip(e.data||[]);
     setIlerleme(prog); setKonular(t.data||[]);
+    const rm = r.data || null;
+    setRoadmap(rm);
+    setRForm(rm ? { ...rm, payments: rm.payments?.length ? rm.payments : bosOdemeler(), custom_fields: rm.custom_fields || [] }
+      : { spec_no: proje.spec_no || "", spec_date: "", contract_no: "", contract_date: "",
+          equipment_cost: proje.bedel || "", materials: "", shipping: "", start_date: "", end_date: "",
+          location: "", payments: bosOdemeler(), custom_fields: [] });
   }
 
   useEffect(() => {
@@ -98,6 +115,46 @@ export default function Spec({ params }) {
     if (!error) await yukleVeri();
   }
 
+  function rAlanDegis(alan, deger) { setRForm({ ...rForm, [alan]: deger }); }
+  function rOdemeDegis(i, alan, deger) {
+    const yeni = [...rForm.payments];
+    yeni[i] = { ...yeni[i], [alan]: deger };
+    setRForm({ ...rForm, payments: yeni });
+  }
+  function rOdemeSil(i) {
+    setRForm({ ...rForm, payments: rForm.payments.filter((_, idx) => idx !== i) });
+  }
+  function rOdemeEkle() {
+    setRForm({ ...rForm, payments: [...rForm.payments, { name: (rForm.payments.length+1)+". Ödeme", amount: "", paid: false }] });
+  }
+  function rOzelAlanDegis(i, alan, deger) {
+    const yeni = [...rForm.custom_fields];
+    yeni[i] = { ...yeni[i], [alan]: deger };
+    setRForm({ ...rForm, custom_fields: yeni });
+  }
+  function rOzelAlanSil(i) {
+    setRForm({ ...rForm, custom_fields: rForm.custom_fields.filter((_, idx) => idx !== i) });
+  }
+  function rOzelAlanEkle() {
+    setRForm({ ...rForm, custom_fields: [...rForm.custom_fields, { label: "", value: "" }] });
+  }
+  async function rKaydetGonder() {
+    setRKaydet(true); setMesaj("Kaydediliyor...");
+    const payload = {
+      project_id: p.id,
+      spec_no: rForm.spec_no || null, spec_date: rForm.spec_date || null,
+      contract_no: rForm.contract_no || null, contract_date: rForm.contract_date || null,
+      equipment_cost: rForm.equipment_cost || null, materials: rForm.materials || null,
+      shipping: rForm.shipping || null, start_date: rForm.start_date || null, end_date: rForm.end_date || null,
+      location: rForm.location || null, payments: rForm.payments, custom_fields: rForm.custom_fields,
+      updated_at: new Date().toISOString(), updated_by: me?.ad_soyad || null,
+    };
+    const { error } = await supabase.from("project_roadmap").upsert(payload, { onConflict: "project_id" });
+    setRKaydet(false);
+    if (error) { setMesaj("Hata: " + error.message); return; }
+    setMesaj(""); setREdit(false); await yukleVeri();
+  }
+
   return (
     <>
       <Ust/>
@@ -108,7 +165,7 @@ export default function Spec({ params }) {
         {mesaj && <div style={{marginTop:8,fontSize:13,color: mesaj.startsWith("Hata")?"#b3261e":"var(--ink2)"}}>{mesaj}</div>}
 
         <section style={{marginTop:16}}>
-          <h2>Yaşam döngüsü</h2>
+          <h2>İş akışı</h2>
           <div className="yasam">
             {dongu.map((a,i) => (
               <span key={a.id} style={{display:"flex",alignItems:"center",gap:5}}>
@@ -118,6 +175,109 @@ export default function Spec({ params }) {
             ))}
           </div>
           <div style={{fontSize:11,color:"var(--ink3)",marginTop:4}}>yeşil = tamam · sarı = devam · kırmızı (yanıp söner) = tıkanıklık</div>
+        </section>
+
+        <section style={{marginTop:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <h2 style={{margin:0}}>Project Roadmap</h2>
+            {me?.admin && (
+              <button className="arac-btn" style={{fontSize:12.5,padding:"7px 14px"}}
+                onClick={()=> rEdit ? setREdit(false) : setREdit(true)}>
+                {rEdit ? "İptal" : "Düzenle"}
+              </button>
+            )}
+          </div>
+
+          {!rEdit && (
+            <div className="grid" style={{marginTop:10}}>
+              <div className="dept"><b>Spesifikasyon No / Tarihi</b><div style={{fontSize:13,marginTop:4}}>{roadmap?.spec_no || p.spec_no || "-"} {roadmap?.spec_date ? "· "+roadmap.spec_date : ""}</div></div>
+              <div className="dept"><b>Sözleşme No / Tarihi</b><div style={{fontSize:13,marginTop:4}}>{roadmap?.contract_no || "-"} {roadmap?.contract_date ? "· "+roadmap.contract_date : ""}</div></div>
+              <div className="dept"><b>Ekipman Bedeli</b><div style={{fontSize:13,marginTop:4}}>{roadmap?.equipment_cost || "-"}</div></div>
+              <div className="dept"><b>Malzeme Listesi</b><div style={{fontSize:13,marginTop:4}}>{roadmap?.materials || "-"}</div></div>
+              <div className="dept"><b>Sevkiyat</b><div style={{fontSize:13,marginTop:4}}>{roadmap?.shipping || "-"}</div></div>
+              <div className="dept"><b>Başlangıç / Bitiş</b><div style={{fontSize:13,marginTop:4}}>{roadmap?.start_date || "-"} → {roadmap?.end_date || "-"}</div></div>
+              <div className="dept"><b>Lokasyon</b><div style={{fontSize:13,marginTop:4}}>{roadmap?.location || "-"}</div></div>
+              {(roadmap?.custom_fields||[]).map((c,i)=>(
+                <div className="dept" key={i}><b>{c.label || "Ek alan"}</b><div style={{fontSize:13,marginTop:4}}>{c.value || "-"}</div></div>
+              ))}
+              <div className="dept">
+                <b>Ödemeler</b>
+                {(roadmap?.payments||[]).length===0 && <div style={{fontSize:12.5,color:"var(--ink3)",marginTop:4}}>Tanımlı değil</div>}
+                {(roadmap?.payments||[]).map((pay,i)=>(
+                  <div key={i} style={{fontSize:12.5,marginTop:4,display:"flex",justifyContent:"space-between"}}>
+                    <span>{pay.name}</span><span style={{color: pay.paid ? "var(--ok)" : "var(--ink3)"}}>{pay.amount || "-"}{pay.paid ? " ✓" : ""}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {rEdit && rForm && (
+            <div style={{marginTop:12,border:"1px solid var(--line)",borderRadius:12,padding:16}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12}}>
+                <div><label style={{fontSize:12,color:"#586173",fontWeight:600}}>Spesifikasyon No</label>
+                  <input value={rForm.spec_no||""} onChange={e=>rAlanDegis("spec_no",e.target.value)} style={{width:"100%",marginTop:5,padding:"9px 11px",border:"1px solid #cbd3de",borderRadius:9,fontSize:13.5}}/></div>
+                <div><label style={{fontSize:12,color:"#586173",fontWeight:600}}>Spesifikasyon Tarihi</label>
+                  <input type="date" value={rForm.spec_date||""} onChange={e=>rAlanDegis("spec_date",e.target.value)} style={{width:"100%",marginTop:5,padding:"9px 11px",border:"1px solid #cbd3de",borderRadius:9,fontSize:13.5}}/></div>
+                <div><label style={{fontSize:12,color:"#586173",fontWeight:600}}>Sözleşme No</label>
+                  <input value={rForm.contract_no||""} onChange={e=>rAlanDegis("contract_no",e.target.value)} style={{width:"100%",marginTop:5,padding:"9px 11px",border:"1px solid #cbd3de",borderRadius:9,fontSize:13.5}}/></div>
+                <div><label style={{fontSize:12,color:"#586173",fontWeight:600}}>Sözleşme Tarihi</label>
+                  <input type="date" value={rForm.contract_date||""} onChange={e=>rAlanDegis("contract_date",e.target.value)} style={{width:"100%",marginTop:5,padding:"9px 11px",border:"1px solid #cbd3de",borderRadius:9,fontSize:13.5}}/></div>
+                <div><label style={{fontSize:12,color:"#586173",fontWeight:600}}>Ekipman Bedeli</label>
+                  <input value={rForm.equipment_cost||""} onChange={e=>rAlanDegis("equipment_cost",e.target.value)} style={{width:"100%",marginTop:5,padding:"9px 11px",border:"1px solid #cbd3de",borderRadius:9,fontSize:13.5}}/></div>
+                <div><label style={{fontSize:12,color:"#586173",fontWeight:600}}>Sevkiyat türü/şekli</label>
+                  <input value={rForm.shipping||""} onChange={e=>rAlanDegis("shipping",e.target.value)} style={{width:"100%",marginTop:5,padding:"9px 11px",border:"1px solid #cbd3de",borderRadius:9,fontSize:13.5}}/></div>
+                <div><label style={{fontSize:12,color:"#586173",fontWeight:600}}>İş Başlangıç Tarihi</label>
+                  <input type="date" value={rForm.start_date||""} onChange={e=>rAlanDegis("start_date",e.target.value)} style={{width:"100%",marginTop:5,padding:"9px 11px",border:"1px solid #cbd3de",borderRadius:9,fontSize:13.5}}/></div>
+                <div><label style={{fontSize:12,color:"#586173",fontWeight:600}}>İş Bitiş Tarihi</label>
+                  <input type="date" value={rForm.end_date||""} onChange={e=>rAlanDegis("end_date",e.target.value)} style={{width:"100%",marginTop:5,padding:"9px 11px",border:"1px solid #cbd3de",borderRadius:9,fontSize:13.5}}/></div>
+                <div><label style={{fontSize:12,color:"#586173",fontWeight:600}}>Lokasyon</label>
+                  <input value={rForm.location||""} onChange={e=>rAlanDegis("location",e.target.value)} style={{width:"100%",marginTop:5,padding:"9px 11px",border:"1px solid #cbd3de",borderRadius:9,fontSize:13.5}}/></div>
+              </div>
+              <div style={{marginTop:12}}>
+                <label style={{fontSize:12,color:"#586173",fontWeight:600}}>Malzeme Listesi</label>
+                <textarea value={rForm.materials||""} onChange={e=>rAlanDegis("materials",e.target.value)} rows={3}
+                  style={{width:"100%",marginTop:5,padding:"9px 11px",border:"1px solid #cbd3de",borderRadius:9,fontSize:13.5}}/>
+              </div>
+
+              <div style={{marginTop:16,borderTop:"1px solid var(--line)",paddingTop:12}}>
+                <label style={{fontSize:12,color:"#586173",fontWeight:600}}>Ödemeler</label>
+                {rForm.payments.map((pay,i)=>(
+                  <div key={i} style={{display:"flex",gap:8,marginTop:6,alignItems:"center",flexWrap:"wrap"}}>
+                    <input value={pay.name} onChange={e=>rOdemeDegis(i,"name",e.target.value)} placeholder="Ödeme adı"
+                      style={{flex:1,minWidth:140,padding:"7px 10px",border:"1px solid #cbd3de",borderRadius:8,fontSize:13}}/>
+                    <input value={pay.amount} onChange={e=>rOdemeDegis(i,"amount",e.target.value)} placeholder="Tutar"
+                      style={{width:120,padding:"7px 10px",border:"1px solid #cbd3de",borderRadius:8,fontSize:13}}/>
+                    <label style={{fontSize:12,display:"flex",alignItems:"center",gap:4}}>
+                      <input type="checkbox" checked={!!pay.paid} onChange={e=>rOdemeDegis(i,"paid",e.target.checked)}/> Ödendi
+                    </label>
+                    <button onClick={()=>rOdemeSil(i)} style={{border:"1px solid #f0b9b5",color:"#b3261e",borderRadius:8,background:"#fff",cursor:"pointer",padding:"5px 9px",fontSize:12}}>✕</button>
+                  </div>
+                ))}
+                <button onClick={rOdemeEkle} className="arac-btn" style={{fontSize:12.5,padding:"6px 12px",marginTop:8}}>+ Ödeme ekle</button>
+              </div>
+
+              <div style={{marginTop:16,borderTop:"1px solid var(--line)",paddingTop:12}}>
+                <label style={{fontSize:12,color:"#586173",fontWeight:600}}>Ek Başlıklar (manuel)</label>
+                {rForm.custom_fields.map((c,i)=>(
+                  <div key={i} style={{display:"flex",gap:8,marginTop:6,flexWrap:"wrap"}}>
+                    <input value={c.label} onChange={e=>rOzelAlanDegis(i,"label",e.target.value)} placeholder="Başlık"
+                      style={{width:180,padding:"7px 10px",border:"1px solid #cbd3de",borderRadius:8,fontSize:13}}/>
+                    <input value={c.value} onChange={e=>rOzelAlanDegis(i,"value",e.target.value)} placeholder="Değer"
+                      style={{flex:1,minWidth:160,padding:"7px 10px",border:"1px solid #cbd3de",borderRadius:8,fontSize:13}}/>
+                    <button onClick={()=>rOzelAlanSil(i)} style={{border:"1px solid #f0b9b5",color:"#b3261e",borderRadius:8,background:"#fff",cursor:"pointer",padding:"5px 9px",fontSize:12}}>✕</button>
+                  </div>
+                ))}
+                <button onClick={rOzelAlanEkle} className="arac-btn" style={{fontSize:12.5,padding:"6px 12px",marginTop:8}}>+ Başlık ekle</button>
+              </div>
+
+              <div style={{marginTop:16,display:"flex",gap:10}}>
+                <button onClick={rKaydetGonder} disabled={rKaydet} className="arac-btn" style={{fontSize:13.5,padding:"9px 20px",background:"#0f7a5f"}}>
+                  {rKaydet ? "Kaydediliyor..." : "Kaydet"}
+                </button>
+              </div>
+            </div>
+          )}
         </section>
 
         <section>
