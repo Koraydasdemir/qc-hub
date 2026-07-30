@@ -76,13 +76,14 @@ export default function Spec({ params }) {
   const [yeniAlarm, setYeniAlarm] = useState("");
   const [editors, setEditors] = useState([]);
   const [profilList, setProfilList] = useState([]);
-  const [editorEkranAcik, setEditorEkranAcik] = useState(false);
   const [ncrTq, setNcrTq] = useState([]);
   const [customItems, setCustomItems] = useState([]);
   const [hiddenItems, setHiddenItems] = useState([]);
   const [proposals, setProposals] = useState([]);
   const [teklifAcik, setTeklifAcik] = useState({});
   const [ncrForm, setNcrForm] = useState({});
+  const [wEdits, setWEdits] = useState({});
+  const [atamaAcikKat, setAtamaAcikKat] = useState(null);
 
   const bosOdemeler = () => ([
     { name: "Advance Payment", amount: "", paid: false },
@@ -151,6 +152,7 @@ export default function Spec({ params }) {
   konular.forEach(k => (konuGrup[k.dept_kod] = konuGrup[k.dept_kod] || []).push(k));
   const yazabilirDept = (dk) => me && (me.admin || me.dept_kod === dk);
   const yetkiliMi = !!(me && (me.admin || editors.some(e => e.ad_soyad === me.ad_soyad)));
+  const yetkiliKat = (katKey) => !!(me && (me.admin || editors.some(e => e.ad_soyad === me.ad_soyad && e.kat_key === katKey)));
   const pzt = pazartesi();
 
   async function konuEkle() {
@@ -211,29 +213,21 @@ export default function Spec({ params }) {
   }
 
   // ---- İş akışı yardımcıları ----
-  async function wUpsert(itemKey, alanlar) {
+  async function wUpsert(itemKey, alanlar, sessiz) {
     const { error } = await supabase.from("workflow_items").upsert({
       project_id: p.id, item_key: itemKey, updated_at: new Date().toISOString(),
       updated_by: me?.ad_soyad || null, ...alanlar,
     }, { onConflict: "project_id,item_key" });
     if (error) { setMesaj("Hata: " + error.message); return; }
-    await yukleVeri();
+    if (!sessiz) await yukleVeri();
   }
   async function durumDegistir(itemKey) {
     if (!me?.admin) return;
     const mevcut = wItems[itemKey]?.status || "grey";
     await wUpsert(itemKey, { status: SONRAKI_DURUM[mevcut] || "grey" });
   }
-  async function metinKaydet(itemKey, deger) {
-    if (!yetkiliMi) return;
-    await wUpsert(itemKey, { text_value: deger, status: deger ? "green" : "grey" });
-  }
-  async function secimKaydet(itemKey, deger) {
-    if (!yetkiliMi) return;
-    await wUpsert(itemKey, { text_value: deger, status: deger === "Approved" ? "green" : "grey" });
-  }
-  async function dosyaYuklWf(itemKey, file) {
-    if (!file || !yetkiliMi) return;
+  async function dosyaYuklWf(itemKey, file, katKey) {
+    if (!file || !yetkiliKat(katKey)) return;
     setMesaj("Yükleniyor...");
     const path = p.kod + "/" + itemKey + "_" + Date.now() + "_" + file.name.replace(/[^\w.\-]/g,"_");
     const { error: upErr } = await supabase.storage.from("is-akisi").upload(path, file, { upsert:false });
@@ -242,17 +236,31 @@ export default function Spec({ params }) {
     await wUpsert(itemKey, { file_url: pub.publicUrl, file_tarih: bugunISO(), status: "green" });
     setMesaj("");
   }
-  async function ziyaretKaydet(itemKey, son, gelecek) {
-    if (!yetkiliMi) return;
-    await wUpsert(itemKey, { text_value: JSON.stringify({ son, gelecek }), status: gelecek ? "green" : "grey" });
-  }
   function odemeTutari(odemeAdi) {
     const pay = (roadmap?.payments||[]).find(x => (x.name||"").toLowerCase() === odemeAdi.toLowerCase());
     return pay?.amount || "";
   }
-  async function odemeManuelKaydet(itemKey, deger) {
-    if (!yetkiliMi) return;
-    await wUpsert(itemKey, { text_value: deger, status: deger ? "green" : "grey" });
+  async function katKaydet(kat) {
+    const degisenler = kat.items.filter(it =>
+      (it.tur==="metin" || it.tur==="secim" || it.tur==="ziyaret" || (it.tur==="odeme" && !odemeTutari(it.odemeAdi)))
+      && wEdits[it.key] !== undefined
+    );
+    if (!degisenler.length) { setMesaj("Değişiklik yok."); return; }
+    setMesaj("Kaydediliyor...");
+    for (const it of degisenler) {
+      const val = wEdits[it.key];
+      if (it.tur === "secim") {
+        await wUpsert(it.key, { text_value: val, status: val === "Approved" ? "green" : "grey" }, true);
+      } else if (it.tur === "ziyaret") {
+        await wUpsert(it.key, { text_value: JSON.stringify(val), status: val?.gelecek ? "green" : "grey" }, true);
+      } else {
+        await wUpsert(it.key, { text_value: val, status: val ? "green" : "grey" }, true);
+      }
+    }
+    const kalan = { ...wEdits };
+    degisenler.forEach(it => delete kalan[it.key]);
+    setWEdits(kalan);
+    setMesaj(""); await yukleVeri();
   }
 
   async function ncrTqEkle(tur, itemKeyKat) {
@@ -295,10 +303,10 @@ export default function Spec({ params }) {
   }
   const alarmKaldirYetkili = (a) => me && (me.admin || a.giren === me.ad_soyad);
 
-  // ---- Personel atama ----
-  async function editorEkle(ad_soyad) {
+  // ---- Personel atama (kategori bazlı) ----
+  async function editorEkle(ad_soyad, katKey) {
     if (!me?.admin || !ad_soyad) return;
-    const { error } = await supabase.from("spec_editors").insert({ project_id: p.id, ad_soyad, atayan: me.ad_soyad });
+    const { error } = await supabase.from("spec_editors").insert({ project_id: p.id, ad_soyad, atayan: me.ad_soyad, kat_key: katKey });
     if (error) { setMesaj("Hata: " + error.message); return; }
     await yukleVeri();
   }
@@ -310,7 +318,7 @@ export default function Spec({ params }) {
 
   // ---- Alt başlık ekle/kaldır teklifleri ----
   async function teklifGonder(katKey, tip, itemKey, itemAd) {
-    if (!yetkiliMi) return;
+    if (!yetkiliKat(katKey)) return;
     if (me?.admin) {
       if (tip === "add") {
         await supabase.from("workflow_custom_items").insert({ project_id: p.id, kat_key: katKey, item_key: "c_"+Date.now(), item_ad: itemAd });
@@ -341,6 +349,7 @@ export default function Spec({ params }) {
   function renderItem(kat, it) {
     const row = wItems[it.key] || {};
     const durum = row.status || "grey";
+    const yetkili = yetkiliKat(kat.key);
     const dot = (
       <span onClick={()=>durumDegistir(it.key)} className={durum==="red" ? "durum-nokta blink" : "durum-nokta"}
         title={me?.admin ? "Tıkla: durumu değiştir" : DURUM_ETIKET[durum]}
@@ -350,19 +359,22 @@ export default function Spec({ params }) {
     if (it.tur === "durum") {
       govde = <span style={{fontSize:11,color:"var(--ink3)"}}>{DURUM_ETIKET[durum]}</span>;
     } else if (it.tur === "metin") {
-      govde = <input defaultValue={row.text_value||""} disabled={!yetkiliMi} onBlur={e=>metinKaydet(it.key,e.target.value)}
+      const val = wEdits[it.key] !== undefined ? wEdits[it.key] : (row.text_value||"");
+      govde = <input value={val} disabled={!yetkili} onChange={e=>setWEdits({...wEdits,[it.key]:e.target.value})}
         placeholder="Değer girin..." style={{fontSize:12.5,padding:"5px 8px",border:"1px solid #cbd3de",borderRadius:7,width:170}}/>;
     } else if (it.tur === "secim") {
-      govde = <select defaultValue={row.text_value||""} disabled={!yetkiliMi} onChange={e=>secimKaydet(it.key,e.target.value)}
+      const val = wEdits[it.key] !== undefined ? wEdits[it.key] : (row.text_value||"");
+      govde = <select value={val} disabled={!yetkili} onChange={e=>setWEdits({...wEdits,[it.key]:e.target.value})}
         style={{fontSize:12.5,padding:"5px 8px",border:"1px solid #cbd3de",borderRadius:7}}>
         <option value="">Seçiniz</option>
         {it.secenekler.map(s=><option key={s} value={s}>{s}</option>)}
       </select>;
     } else if (it.tur === "odeme") {
       const otomatik = odemeTutari(it.odemeAdi);
+      const val = wEdits[it.key] !== undefined ? wEdits[it.key] : (row.text_value||"");
       govde = otomatik
         ? <span style={{fontSize:12.5}}>{otomatik} <span style={{color:"var(--ink3)",fontSize:10.5}}>(Roadmap)</span></span>
-        : <input defaultValue={row.text_value||""} disabled={!yetkiliMi} onBlur={e=>odemeManuelKaydet(it.key,e.target.value)}
+        : <input value={val} disabled={!yetkili} onChange={e=>setWEdits({...wEdits,[it.key]:e.target.value})}
             placeholder="Tutar (manuel)" style={{fontSize:12.5,padding:"5px 8px",border:"1px solid #cbd3de",borderRadius:7,width:140}}/>;
     } else if (it.tur === "dosya" || it.tur === "dosya_haftalik") {
       const stale = it.tur === "dosya_haftalik" && (!row.file_tarih || new Date(row.file_tarih) < pzt);
@@ -370,22 +382,25 @@ export default function Spec({ params }) {
         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
           {row.file_url && <a href={row.file_url} target="_blank" rel="noreferrer" style={{fontSize:12}}>📎 dosya {row.file_tarih?("("+row.file_tarih+")"):""}</a>}
           {stale && <span style={{fontSize:11,color:"#b3261e",fontWeight:600}}>Güncel değil</span>}
-          {yetkiliMi && (
+          {yetkili && (
             <label className="arac-btn" style={{cursor:"pointer",fontSize:11.5,padding:"4px 10px"}}>
               Yükle
-              <input type="file" style={{display:"none"}} onChange={e=>dosyaYuklWf(it.key, e.target.files[0])}/>
+              <input type="file" style={{display:"none"}} onChange={e=>dosyaYuklWf(it.key, e.target.files[0], kat.key)}/>
             </label>
           )}
         </div>
       );
     } else if (it.tur === "ziyaret") {
-      let val = {}; try { val = JSON.parse(row.text_value||"{}"); } catch(e) {}
+      let mevcut = {}; try { mevcut = JSON.parse(row.text_value||"{}"); } catch(e) {}
+      const val = wEdits[it.key] !== undefined ? wEdits[it.key] : mevcut;
       govde = (
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:12}}>
-          <span>Son: <input type="date" defaultValue={val.son||""} disabled={!yetkiliMi}
-            onBlur={e=>ziyaretKaydet(it.key, e.target.value, val.gelecek||"")} style={{fontSize:12,padding:"3px 6px",border:"1px solid #cbd3de",borderRadius:6}}/></span>
-          <span>Sonraki: <input type="date" defaultValue={val.gelecek||""} disabled={!yetkiliMi}
-            onBlur={e=>ziyaretKaydet(it.key, val.son||"", e.target.value)} style={{fontSize:12,padding:"3px 6px",border:"1px solid #cbd3de",borderRadius:6}}/></span>
+          <span>Son: <input type="date" value={val.son||""} disabled={!yetkili}
+            onChange={e=>setWEdits({...wEdits,[it.key]:{ son:e.target.value, gelecek: val.gelecek||"" }})}
+            style={{fontSize:12,padding:"3px 6px",border:"1px solid #cbd3de",borderRadius:6}}/></span>
+          <span>Sonraki: <input type="date" value={val.gelecek||""} disabled={!yetkili}
+            onChange={e=>setWEdits({...wEdits,[it.key]:{ son: val.son||"", gelecek:e.target.value }})}
+            style={{fontSize:12,padding:"3px 6px",border:"1px solid #cbd3de",borderRadius:6}}/></span>
         </div>
       );
     } else if (it.tur === "liste") {
@@ -401,10 +416,10 @@ export default function Spec({ params }) {
               <span style={{textTransform:"uppercase",fontSize:10,fontWeight:700,color:"#a9721a"}}>{x.tur}</span>
               {x.dosya_url ? <a href={x.dosya_url} target="_blank" rel="noreferrer">{x.baslik}</a> : <span>{x.baslik}</span>}
               <span style={{color:"var(--ink3)",fontSize:10.5}}>{x.tarih}</span>
-              {yetkiliMi && <button onClick={()=>ncrTqKapat(x)} style={{fontSize:10.5,border:"1px solid #cbd3de",borderRadius:6,background:"#fff",cursor:"pointer",padding:"2px 6px"}}>Kapat</button>}
+              {yetkili && <button onClick={()=>ncrTqKapat(x)} style={{fontSize:10.5,border:"1px solid #cbd3de",borderRadius:6,background:"#fff",cursor:"pointer",padding:"2px 6px"}}>Kapat</button>}
             </div>
           ))}
-          {yetkiliMi && (
+          {yetkili && (
             <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:2}}>
               {it.liste==="ncr" && (
                 <select value={f.tur||"ncr"} onChange={e=>setNcrForm({...ncrForm,[formKey]:{...f,tur:e.target.value}})}
@@ -429,7 +444,7 @@ export default function Spec({ params }) {
         {dot}
         <span style={{minWidth:170,fontWeight:500}}>{it.ad}</span>
         <span style={{flex:1,display:"flex",alignItems:"center"}}>{govde}</span>
-        {yetkiliMi && (
+        {yetkili && (
           <button onClick={()=>{
             const ad = prompt("Kaldırma nedeni / not (opsiyonel):", "");
             if (ad===null) return;
@@ -449,36 +464,9 @@ export default function Spec({ params }) {
         <div style={{fontSize:13,color:"var(--ink2)"}}>Spec {p.spec_no} · aşama: {p.asama} {p.bedel?"· "+p.bedel:""}</div>
         {mesaj && <div style={{marginTop:8,fontSize:13,color: mesaj.startsWith("Hata")?"#b3261e":"var(--ink2)"}}>{mesaj}</div>}
 
-        <section style={{marginTop:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
-            <h2 style={{margin:0}}>İş akışı</h2>
-            {me?.admin && (
-              <button className="arac-btn" style={{fontSize:12,padding:"6px 12px"}} onClick={()=>setEditorEkranAcik(!editorEkranAcik)}>
-                👤 Personel atama {editors.length>0 ? "("+editors.length+")" : ""}
-              </button>
-            )}
-          </div>
-
-          {editorEkranAcik && me?.admin && (
-            <div style={{marginTop:10,border:"1px solid var(--line)",borderRadius:10,padding:12}}>
-              <div style={{fontSize:12,color:"#586173",fontWeight:600,marginBottom:6}}>Bu spec üzerinde veri girişi/düzenleme yapabilecek kişiler</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
-                {editors.map(e => (
-                  <span key={e.id} className="pill" style={{background:"#e7f0fb",color:"#0c447c",display:"flex",alignItems:"center",gap:6}}>
-                    {e.ad_soyad}
-                    <span onClick={()=>editorSil(e)} style={{cursor:"pointer",fontWeight:700}}>✕</span>
-                  </span>
-                ))}
-                {editors.length===0 && <span style={{fontSize:12,color:"var(--ink3)"}}>Henüz kimse atanmadı — yalnızca siz düzenleyebilirsiniz.</span>}
-              </div>
-              <select onChange={e=>{ if(e.target.value){ editorEkle(e.target.value); e.target.value=""; } }}
-                defaultValue="" style={{fontSize:12.5,padding:"7px 10px",border:"1px solid #cbd3de",borderRadius:8}}>
-                <option value="">+ Kişi ekle...</option>
-                {profilList.filter(pf=>!editors.some(e=>e.ad_soyad===pf.ad_soyad)).map(pf=>
-                  <option key={pf.ad_soyad} value={pf.ad_soyad}>{pf.ad_soyad}</option>)}
-              </select>
-            </div>
-          )}
+        <section style={{marginTop:16, marginLeft:"calc(50% - 50vw)", marginRight:"calc(50% - 50vw)", borderRadius:0, padding:"18px 30px"}}>
+          <h2 style={{margin:0}}>İş akışı</h2>
+          <p style={{fontSize:12,color:"var(--ink3)",margin:"4px 0 0"}}>Her kategori kartının üstünde o kategoriden sorumlu kişi(ler) görünür — atamak için 👤 simgesine tıklayın (yalnızca admin).</p>
 
           {me?.admin && proposals.length>0 && (
             <div style={{marginTop:10,border:"1px solid #f0c96b",background:"#fffaf0",borderRadius:10,padding:12}}>
@@ -493,19 +481,42 @@ export default function Spec({ params }) {
             </div>
           )}
 
-          <div style={{display:"flex",gap:12,marginTop:12,overflowX:"auto",paddingBottom:6,alignItems:"flex-start"}}>
+          <div style={{display:"flex",gap:14,marginTop:12,flexWrap:"wrap",alignItems:"flex-start"}}>
             {WORKFLOW.map(kat => {
               const ozelBu = customItems.filter(c=>c.kat_key===kat.key);
               const gorunenItems = kat.items.filter(it=>!hiddenItems.includes(it.key));
+              const katEditors = editors.filter(e=>e.kat_key===kat.key);
+              const katYetkili = yetkiliKat(kat.key);
+              const varMi = Object.keys(wEdits).some(k => kat.items.some(it=>it.key===k));
               return (
-                <div key={kat.key} style={{border:"1px solid var(--line)",borderRadius:12,overflow:"hidden",minWidth:280,flex:"0 0 auto"}}>
+                <div key={kat.key} style={{border:"1px solid var(--line)",borderRadius:12,overflow:"hidden",minWidth:300,maxWidth:340,flex:"1 1 300px"}}>
                   <div onClick={()=>katToggle(kat.key)}
                     style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:"#f4f6f9",cursor:"pointer",gap:10}}>
                     <b style={{fontSize:14,whiteSpace:"nowrap"}}>{kat.ad}</b>
                     <span style={{fontSize:12,color:"var(--ink3)"}}>{acikKat[kat.key] ? "▲" : "▼"}</span>
                   </div>
+                  <div style={{padding:"8px 14px",borderBottom:"1px solid var(--line)",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}} onClick={e=>e.stopPropagation()}>
+                    {katEditors.map(e => (
+                      <span key={e.id} className="pill" style={{background:"#e7f0fb",color:"#0c447c",fontSize:11,display:"flex",alignItems:"center",gap:5}}>
+                        {e.ad_soyad}
+                        {me?.admin && <span onClick={()=>editorSil(e)} style={{cursor:"pointer",fontWeight:700}}>✕</span>}
+                      </span>
+                    ))}
+                    {katEditors.length===0 && <span style={{fontSize:11,color:"var(--ink3)"}}>Sorumlu atanmadı</span>}
+                    {me?.admin && (
+                      <span onClick={()=>setAtamaAcikKat(atamaAcikKat===kat.key?null:kat.key)} style={{cursor:"pointer",fontSize:13}} title="Sorumlu ata">👤</span>
+                    )}
+                    {me?.admin && atamaAcikKat===kat.key && (
+                      <select onChange={e=>{ if(e.target.value){ editorEkle(e.target.value, kat.key); e.target.value=""; setAtamaAcikKat(null); } }}
+                        defaultValue="" style={{fontSize:11.5,padding:"4px 6px",border:"1px solid #cbd3de",borderRadius:6}}>
+                        <option value="">+ Kişi seç...</option>
+                        {profilList.filter(pf=>!katEditors.some(e=>e.ad_soyad===pf.ad_soyad)).map(pf=>
+                          <option key={pf.ad_soyad} value={pf.ad_soyad}>{pf.ad_soyad}</option>)}
+                      </select>
+                    )}
+                  </div>
                   {acikKat[kat.key] !== false && (
-                    <div style={{padding:"10px 14px",display:"flex",flexDirection:"column",gap:8,width:280}}>
+                    <div style={{padding:"10px 14px",display:"flex",flexDirection:"column",gap:8}}>
                       {gorunenItems.map(it => renderItem(kat, it))}
                       {ozelBu.map(c => (
                         <div key={c.id} style={{display:"flex",alignItems:"center",gap:10,fontSize:13,borderBottom:"1px dashed var(--line)",paddingBottom:8}}>
@@ -514,7 +525,12 @@ export default function Spec({ params }) {
                           <span style={{flex:1}}>{c.item_ad} <span style={{fontSize:9.5,color:"var(--ink3)"}}>(özel)</span></span>
                         </div>
                       ))}
-                      {yetkiliMi && (
+                      {katYetkili && (
+                        <button onClick={()=>katKaydet(kat)} className="arac-btn" style={{fontSize:12,padding:"7px 14px",background: varMi ? "#0f7a5f" : "#8b94a4"}}>
+                          {varMi ? "💾 Kaydet" : "Kaydedildi"}
+                        </button>
+                      )}
+                      {katYetkili && (
                         <div style={{display:"flex",gap:6,marginTop:4}}>
                           <input value={teklifAcik[kat.key]||""} onChange={e=>setTeklifAcik({...teklifAcik,[kat.key]:e.target.value})}
                             placeholder="Yeni alt başlık..." style={{fontSize:11.5,padding:"5px 8px",border:"1px solid #cbd3de",borderRadius:7,flex:1}}/>
@@ -528,7 +544,7 @@ export default function Spec({ params }) {
               );
             })}
           </div>
-          <div style={{fontSize:11,color:"var(--ink3)",marginTop:8}}>gri = veri yok · yeşil = tamam · kırmızı (yanıp söner) = tıkanıklık · renk değiştirme: yalnızca Koray · veri girişi/dosya yükleme: Koray + atanan kişiler · alt başlık ekleme/kaldırma önerileri Koray onayına düşer</div>
+          <div style={{fontSize:11,color:"var(--ink3)",marginTop:8}}>gri = veri yok · yeşil = tamam · kırmızı (yanıp söner) = tıkanıklık · renk değiştirme: yalnızca Koray · veri girişi/dosya yükleme: Koray + o kategoriye atanan kişi · alt başlık ekleme/kaldırma önerileri Koray onayına düşer</div>
           <style jsx>{`
             .blink { animation: blinkAnim 1s infinite; }
             @keyframes blinkAnim { 0%,100%{opacity:1;} 50%{opacity:0.25;} }
