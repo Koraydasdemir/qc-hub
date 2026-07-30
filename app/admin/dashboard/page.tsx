@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import UserManagement from '@/components/admin/UserManagement';
-import ApprovalQueue from '@/components/admin/ApprovalQueue';
-import Analytics from '@/components/admin/Analytics';
+import { createClient } from '../../../lib/supabase/client';
+import UserManagement from '../../../components/admin/UserManagement';
+import ApprovalQueue from '../../../components/admin/ApprovalQueue';
+import Analytics from '../../../components/admin/Analytics';
 
 export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false);

@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { getUserPermissions } from '@/lib/supabase/queries';
-import SpecHeader from '@/components/spec/SpecHeader';
-import ProjectRoadmap from '@/components/spec/ProjectRoadmap';
-import WorkflowStages from '@/components/spec/WorkflowStages';
-import QATracking from '@/components/spec/QATracking';
+import { createClient } from '../../../lib/supabase/client';
+import { getUserPermissions } from '../../../lib/supabase/queries';
+import SpecHeader from '../../../components/spec/SpecHeader';
+import ProjectRoadmap from '../../../components/spec/ProjectRoadmap';
+import WorkflowStages from '../../../components/spec/WorkflowStages';
+import QATracking from '../../../components/spec/QATracking';
 
 interface SpecData {
   kod: string;

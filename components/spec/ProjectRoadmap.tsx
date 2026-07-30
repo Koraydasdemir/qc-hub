@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { getProjectRoadmap, updateProjectRoadmap } from '@/lib/supabase/queries';
-import { useCanAction } from '@/lib/supabase/permissions';
+import { createClient } from '../../lib/supabase/client';
+import { getProjectRoadmap, updateProjectRoadmap } from '../../lib/supabase/queries';
+import { useCanAction } from '../../lib/supabase/permissions';
 import styles from './spec.module.css';
 
 interface ProjectRoadmapData {

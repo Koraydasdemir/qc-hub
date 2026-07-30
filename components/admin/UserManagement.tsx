@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { grantPermission } from '@/lib/supabase/queries';
-import { getPermissionLabel } from '@/lib/supabase/permissions';
+import { createClient } from '../../lib/supabase/client';
+import { grantPermission } from '../../lib/supabase/queries';
+import { getPermissionLabel } from '../../lib/supabase/permissions';
 
 interface User {
   id: string;
