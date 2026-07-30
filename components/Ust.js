@@ -74,22 +74,25 @@ export default function Ust() {
       <style jsx>{`
         .alt-baslik {
           display: flex;
-          gap: 4px;
           background: #0d3f7a;
-          padding: 6px 16px;
+          padding: 0 16px;
           overflow-x: auto;
-          flex-wrap: nowrap;
         }
         .dept-buton {
+          flex: 1;
           background: transparent;
           border: none;
+          border-right: 1px solid rgba(255, 255, 255, 0.18);
           color: #dbe8fb;
           font-size: 12.5px;
-          padding: 6px 12px;
-          border-radius: 5px;
+          padding: 9px 10px;
           cursor: pointer;
           white-space: nowrap;
+          text-align: center;
           transition: background 0.15s;
+        }
+        .dept-buton:last-child {
+          border-right: none;
         }
         .dept-buton:hover {
           background: rgba(255, 255, 255, 0.15);
@@ -97,11 +100,11 @@ export default function Ust() {
         }
         @media (max-width: 768px) {
           .alt-baslik {
-            padding: 6px 10px;
+            padding: 0 10px;
           }
           .dept-buton {
             font-size: 11.5px;
-            padding: 5px 8px;
+            padding: 8px 6px;
           }
         }
       `}</style>
