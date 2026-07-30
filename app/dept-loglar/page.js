@@ -77,7 +77,7 @@ export default function DeptLoglar() {
     if (!error) await yukleVeri();
   }
 
-  if (yukle) return <><Ust/><div className="wrap">Yükleniyor...</div></>;
+  if (yukle) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--ink3)",fontSize:14}}>Yükleniyor...</div>;
   if (!yetkili) return <><Ust/><div className="wrap"><a href="/">← Ana ekran</a><p style={{marginTop:14}}>Bu sayfa yalnızca yönetici veya departman sorumlularına açıktır. Departman loglarını ana ekrandaki "Departman logları" bölümünden görüntüleyebilirsiniz.</p></div></>;
 
   return (

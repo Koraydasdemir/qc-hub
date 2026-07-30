@@ -69,7 +69,7 @@ export default function Onaylar() {
     if (!error) await yukleVeri(me?.admin);
   }
 
-  if (yukle) return <><Ust/><div className="wrap">Yükleniyor...</div></>;
+  if (yukle) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--ink3)",fontSize:14}}>Yükleniyor...</div>;
 
   return (
     <>

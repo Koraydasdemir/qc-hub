@@ -146,7 +146,7 @@ export default function Spec({ params }) {
     })();
   }, [kod]);
 
-  if (yukle) return <><Ust/><div className="wrap">Yükleniyor...</div></>;
+  if (yukle) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--ink3)",fontSize:14}}>Yükleniyor...</div>;
   if (!p) return <><Ust/><div className="wrap"><a href="/">← Ana ekran</a><p>Proje bulunamadı.</p></div></>;
 
   const asamalar = ["Satın alma","Döküm/Hammadde","İmalat","Talaşlı imalat","Boya/Son işlem","Hazır"];

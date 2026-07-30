@@ -25,7 +25,7 @@ export default function KatalogDetay({ params }) {
     })();
   }, [id]);
 
-  if (yukle) return <><Ust/><div className="wrap">Yükleniyor...</div></>;
+  if (yukle) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--ink3)",fontSize:14}}>Yükleniyor...</div>;
   if (!r) return <><Ust/><div className="wrap"><a href="/katalog">← Spec Kataloğu</a><p>Kayıt bulunamadı.</p></div></>;
 
   return (

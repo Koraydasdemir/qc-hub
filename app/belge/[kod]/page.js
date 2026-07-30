@@ -26,7 +26,7 @@ export default function BelgeGor({ params }) {
     })();
   }, [kod]);
 
-  if (yukle) return <><Ust/><div className="wrap">Yükleniyor...</div></>;
+  if (yukle) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--ink3)",fontSize:14}}>Yükleniyor...</div>;
   if (!d) return <><Ust/><div className="wrap"><a href="/belge">← Belge hazırla</a><p>Belge bulunamadı.</p></div></>;
 
   const tarih = new Date(d.tespit_tarihi).toLocaleDateString("tr-TR");

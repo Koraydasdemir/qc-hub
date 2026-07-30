@@ -53,7 +53,7 @@ export default function Dashboard() {
     })();
   }, []);
 
-  if (yukle) return <><Ust/><div className="wrap">Yükleniyor...</div></>;
+  if (yukle) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--ink3)",fontSize:14}}>Yükleniyor...</div>;
 
   const tedarikciler = [...new Set(katalog.map(k => k.tedarikci).filter(Boolean))].sort();
   const specSecenekleri = katalog.filter(k => k.tedarikci === secTed);

@@ -55,7 +55,7 @@ export default function Arsiv() {
   const openSay = rows.filter(r => r.durum==="Open").length;
   const closedSay = rows.filter(r => r.durum==="Closed").length;
 
-  if (yukle) return <><Ust/><div className="wrap">Yükleniyor...</div></>;
+  if (yukle) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--ink3)",fontSize:14}}>Yükleniyor...</div>;
 
   return (
     <>
