@@ -690,7 +690,15 @@ export default function Spec({ params }) {
               </div>
               <div style={{marginTop:14,borderTop:"1px solid var(--line)",paddingTop:12,display:"flex",gap:20,flexWrap:"wrap"}}>
                 <div style={{flex:1,minWidth:220}}>
-                  <b style={{fontSize:12.5,color:"var(--navy)"}}>Son Progress Report</b>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <b style={{fontSize:12.5,color:"var(--navy)"}}>Son Progress Report</b>
+                    {yetkiliKat("kalite") && (
+                      <label className="arac-btn" style={{cursor:"pointer",fontSize:11,padding:"4px 10px"}}>
+                        {wItems["kalite_progress"]?.file_url ? "Değiştir" : "Yükle"}
+                        <input type="file" style={{display:"none"}} onChange={e=>dosyaYuklWf("kalite_progress", e.target.files[0], "kalite")}/>
+                      </label>
+                    )}
+                  </div>
                   {wItems["kalite_progress"]?.file_url ? (
                     <div style={{marginTop:6,fontSize:12.5}}>
                       <a href={wItems["kalite_progress"].file_url} target="_blank" rel="noreferrer">📎 Raporu görüntüle</a>
@@ -701,7 +709,15 @@ export default function Spec({ params }) {
                   ) : <div style={{fontSize:12,color:"var(--ink3)",marginTop:6}}>Henüz rapor yüklenmedi</div>}
                 </div>
                 <div style={{flex:1,minWidth:220}}>
-                  <b style={{fontSize:12.5,color:"var(--navy)"}}>Observation Report</b>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <b style={{fontSize:12.5,color:"var(--navy)"}}>Observation Report</b>
+                    {yetkiliKat("kalite") && (
+                      <label className="arac-btn" style={{cursor:"pointer",fontSize:11,padding:"4px 10px"}}>
+                        {wItems["kalite_obs"]?.file_url ? "Değiştir" : "Yükle"}
+                        <input type="file" style={{display:"none"}} onChange={e=>dosyaYuklWf("kalite_obs", e.target.files[0], "kalite")}/>
+                      </label>
+                    )}
+                  </div>
                   {wItems["kalite_obs"]?.file_url ? (
                     <div style={{marginTop:6,fontSize:12.5}}>
                       <a href={wItems["kalite_obs"].file_url} target="_blank" rel="noreferrer">📎 Raporu görüntüle</a>
