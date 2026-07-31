@@ -5,7 +5,7 @@ import { supabase } from "../../lib/supabase";
 import Ust from "../../components/Ust";
 
 const bugun = () => new Date().toLocaleDateString("tr-TR");
-const bosTalep = { metin: "", hedef_kisi: "", file: null };
+const bosTalep = { metin: "", hedef_kisi: "", file: null, herkese_acik: false, gorunur_kisiler: [] };
 
 export default function Onaylar() {
   const router = useRouter();
@@ -18,8 +18,12 @@ export default function Onaylar() {
   const [form, setForm] = useState(bosTalep);
   const [mesaj, setMesaj] = useState("");
 
-  async function yukleVeri(admin) {
-    const istekler = [supabase.from("approval_requests").select("*").order("created_at",{ascending:false})];
+  async function yukleVeri(admin, benimAd) {
+    const q = supabase.from("approval_requests").select("*").order("created_at",{ascending:false});
+    if (!admin && benimAd) {
+      q.or(`herkese_acik.eq.true,talep_eden.eq."${benimAd}",hedef_kisi.eq."${benimAd}",gorunur_kisiler.cs.{"${benimAd}"}`);
+    }
+    const istekler = [q];
     if (admin) istekler.push(supabase.from("payment_gates").select("*,projects(kod,ad,spec_no,suppliers(ad))").eq("durum", "dekont yüklendi").order("dekont_tarihi"));
     const sonuc = await Promise.all(istekler);
     setTalepler(sonuc[0].data || []);
@@ -33,15 +37,20 @@ export default function Onaylar() {
       setMe(prof || null);
       const { data: pl } = await supabase.from("profiles").select("ad_soyad").order("ad_soyad");
       setProfilList(pl || []);
-      await yukleVeri(prof?.admin); setYukle(false);
+      await yukleVeri(prof?.admin, prof?.ad_soyad); setYukle(false);
     })();
   }, []);
+
+  function kisiSecToggle(ad_soyad) {
+    const varMi = form.gorunur_kisiler.includes(ad_soyad);
+    setForm({ ...form, gorunur_kisiler: varMi ? form.gorunur_kisiler.filter(x=>x!==ad_soyad) : [...form.gorunur_kisiler, ad_soyad] });
+  }
 
   async function onayla(g) {
     setMesaj("Onaylanıyor...");
     const { error } = await supabase.from("payment_gates").update({ durum:"açık", acilma_tarihi:bugun() }).eq("id", g.id);
     if (error) { setMesaj("Hata: " + error.message); return; }
-    setMesaj(""); await yukleVeri(me?.admin);
+    setMesaj(""); await yukleVeri(me?.admin, me?.ad_soyad);
   }
 
   async function talepGonder() {
@@ -57,16 +66,17 @@ export default function Onaylar() {
     const { error } = await supabase.from("approval_requests").insert({
       metin: form.metin.trim(), hedef_kisi: form.hedef_kisi, talep_eden: me?.ad_soyad || null,
       talep_tarihi: bugun(), durum: "bekliyor", dosya_url,
+      herkese_acik: form.herkese_acik, gorunur_kisiler: form.herkese_acik ? [] : form.gorunur_kisiler,
     });
     if (error) { setMesaj("Hata: " + error.message); return; }
-    setForm(bosTalep); setTalepFormAcik(false); setMesaj(""); await yukleVeri(me?.admin);
+    setForm(bosTalep); setTalepFormAcik(false); setMesaj(""); await yukleVeri(me?.admin, me?.ad_soyad);
   }
 
   async function talepKarar(t, onay) {
     const { error } = await supabase.from("approval_requests").update({
       durum: onay ? "onaylandı" : "reddedildi", onay_tarihi: bugun(),
     }).eq("id", t.id);
-    if (!error) await yukleVeri(me?.admin);
+    if (!error) await yukleVeri(me?.admin, me?.ad_soyad);
   }
 
   if (yukle) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--ink3)",fontSize:14}}>Yükleniyor...</div>;
@@ -106,6 +116,33 @@ export default function Onaylar() {
                   {form.file ? form.file.name : "Dosya seç"}
                   <input type="file" style={{display:"none"}} onChange={e=>setForm({...form,file:e.target.files[0]})}/>
                 </label>
+              </div>
+              <div style={{gridColumn:"1 / span 2"}}>
+                <label style={{fontSize:12,color:"#586173",fontWeight:600}}>Kimler görebilir?</label>
+                <div style={{marginTop:6,display:"flex",flexWrap:"wrap",gap:6}}>
+                  <button type="button" onClick={()=>setForm({...form,herkese_acik:!form.herkese_acik})}
+                    style={{fontSize:12.5,padding:"7px 14px",borderRadius:8,cursor:"pointer",fontWeight:600,
+                      border: form.herkese_acik ? "1.5px solid #0f7a5f" : "1px solid #cbd3de",
+                      background: form.herkese_acik ? "#0f7a5f" : "#fff",
+                      color: form.herkese_acik ? "#fff" : "#16304f"}}>
+                    🏢 Tüm ofis
+                  </button>
+                  {!form.herkese_acik && profilList.map(pf => {
+                    const secili = form.gorunur_kisiler.includes(pf.ad_soyad);
+                    return (
+                      <button type="button" key={pf.ad_soyad} onClick={()=>kisiSecToggle(pf.ad_soyad)}
+                        style={{fontSize:12,padding:"6px 12px",borderRadius:8,cursor:"pointer",
+                          border: secili ? "1.5px solid #0c447c" : "1px solid #cbd3de",
+                          background: secili ? "#e7f0fb" : "#fff",
+                          color: secili ? "#0c447c" : "#586173"}}>
+                        {pf.ad_soyad}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{fontSize:11,color:"var(--ink3)",marginTop:6}}>
+                  {form.herkese_acik ? "Herkes görebilir." : "Sadece onaya gönderilen kişi, siz ve yukarıda seçtikleriniz görebilir. \"Tüm ofis\"e tıklarsanız herkes görür."}
+                </div>
               </div>
             </div>
             <div style={{marginTop:12,display:"flex",gap:10}}>
