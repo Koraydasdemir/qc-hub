@@ -16,7 +16,7 @@ a{color:var(--steel);text-decoration:none}a:hover{text-decoration:underline}
 .ust .kim{font-size:13px;color:#e9f1fb}
 .ust .kim b{color:#fff}
 .ust a.cikis{color:#ffd6ca;font-size:13px;border:1px solid rgba(255,255,255,.3);border-radius:9px;padding:6px 13px}
-.wrap{max-width:1180px;margin:0 auto;padding:22px 30px}
+.wrap{max-width:1600px;margin:0 auto;padding:22px 40px}
 h1{font-size:20px;color:var(--navy);margin:0 0 4px}
 h2{font-size:15px;color:var(--navy);margin:22px 0 12px;display:flex;align-items:center;gap:9px}
 h2::before{content:"";width:4px;height:16px;border-radius:3px;background:var(--accent)}
