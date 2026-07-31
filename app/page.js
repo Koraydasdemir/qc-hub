@@ -27,6 +27,11 @@ export default function Dashboard() {
   const [secTed, setSecTed] = useState("");
   const [secSpec, setSecSpec] = useState("");
   const [kapali, setKapali] = useState([]);
+  const [adBaslik, setAdBaslik] = useState({});
+  const [mesajLog, setMesajLog] = useState("");
+  const [tedFiltre, setTedFiltre] = useState("");
+  const [asamaFiltre, setAsamaFiltre] = useState("");
+  const [projeAra, setProjeAra] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -81,6 +86,38 @@ export default function Dashboard() {
   const deptGrup = {};
   depler.filter(d => d.kod !== "08").forEach(d => { deptGrup[d.kod] = { dep: d, loglar: loglar.filter(l => l.dept_kod === d.kod) }; });
 
+  async function yukleVeri() {
+    const [{ data: dep }, { data: lg }] = await Promise.all([
+      supabase.from("departments").select("*").order("kod"),
+      supabase.from("department_logs").select("*").order("dept_kod").order("log_adi"),
+    ]);
+    setDepler(dep || []); setLoglar(lg || []);
+  }
+  async function dosyaYukle(dep, file) {
+    if (!file) return;
+    const ad = (adBaslik[dep.kod] || "").trim();
+    if (!ad) { setMesajLog("Önce " + dep.ad + " için log adı yazın"); return; }
+    setMesajLog("Yükleniyor...");
+    const path = dep.kod + "/" + Date.now() + "_" + file.name.replace(/[^\w.\-]/g, "_");
+    const { error: upErr } = await supabase.storage.from("departman-log").upload(path, file, { upsert: false });
+    if (upErr) { setMesajLog("Hata: " + upErr.message); return; }
+    const { data: pub } = supabase.storage.from("departman-log").getPublicUrl(path);
+    const { error } = await supabase.from("department_logs").insert({
+      dept_kod: dep.kod, log_adi: ad, dosya_url: pub.publicUrl, storage_path: path, guncelleme_tarihi: new Date().toISOString().slice(0,10),
+    });
+    if (error) { setMesajLog("Hata: " + error.message); return; }
+    setAdBaslik({ ...adBaslik, [dep.kod]: "" }); setMesajLog(""); await yukleVeri();
+  }
+  const dosyaYuklemeYetkili = (dk) => admin || me?.dept_kod === dk;
+
+  const tedarikcilerProje = [...new Set(projeler.map(p => p.suppliers?.ad).filter(Boolean))].sort();
+  const asamalarProje = [...new Set(projeler.map(p => p.asama).filter(Boolean))].sort();
+  const projelerGosterilen = projeler.filter(p =>
+    (!tedFiltre || p.suppliers?.ad === tedFiltre) &&
+    (!asamaFiltre || p.asama === asamaFiltre) &&
+    (!projeAra || (p.ad+" "+(p.suppliers?.ad||"")+" "+(p.spec_no||"")).toLowerCase().includes(projeAra.toLowerCase()))
+  );
+
   return (
     <>
       <Ust/>
@@ -96,7 +133,7 @@ export default function Dashboard() {
             <a href="/arsiv" style={{background:"#fff",color:"#16304f",border:"1.5px solid #cdd6e2",padding:"11px 18px",borderRadius:11,fontWeight:600,fontSize:14}}>📚 NCR Arşivi</a>
             <a href="/katalog" style={{background:"#fff",color:"#16304f",border:"1.5px solid #cdd6e2",padding:"11px 18px",borderRadius:11,fontWeight:600,fontSize:14}}>📄 Spec Kataloğu</a>
             {(admin || (me?.dept_kod && me.dept_kod !== "08")) && <a href="/dept-loglar" style={{background:"#fff",color:"#16304f",border:"1.5px solid #cdd6e2",padding:"11px 18px",borderRadius:11,fontWeight:600,fontSize:14}}>🗂 Departman Logları</a>}
-            <a href="/belge" style={{background:"#e08a3c",color:"#fff",padding:"12px 22px",borderRadius:11,fontWeight:600,fontSize:14,boxShadow:"0 4px 14px rgba(224,138,60,.35)"}}>+ Belge hazırla (NCR / DÖF)</a>
+            <a href="/belge" style={{background:"#e08a3c",color:"#fff",padding:"12px 22px",borderRadius:11,fontWeight:600,fontSize:14,boxShadow:"0 4px 14px rgba(224,138,60,.35)"}}>Belge Hazırla</a>
           </div>
         </div>
 
@@ -156,6 +193,7 @@ export default function Dashboard() {
 
         <section style={{marginTop:16}}>
           <h2>Departman logları</h2>
+          {mesajLog && <div style={{fontSize:13,color: mesajLog.startsWith("Hata")?"#b3261e":"var(--ink2)",marginBottom:8}}>{mesajLog}</div>}
           <div className="grid">
             {Object.values(deptGrup).map(({dep, loglar: dl}) => (
               <div key={dep.kod} className="dept">
@@ -171,14 +209,36 @@ export default function Dashboard() {
                     </div>
                   );
                 })}
+                {dosyaYuklemeYetkili(dep.kod) && (
+                  <div style={{marginTop:10,borderTop:"1px solid var(--line)",paddingTop:10}}>
+                    <input value={adBaslik[dep.kod]||""} onChange={e=>setAdBaslik({...adBaslik,[dep.kod]:e.target.value})}
+                      placeholder="Log adı (örn. Finans raporu)" style={{width:"100%",padding:"7px 9px",border:"1px solid #cbd3de",borderRadius:8,fontSize:12.5,marginBottom:6}}/>
+                    <label className="arac-btn" style={{cursor:"pointer",fontSize:12,padding:"6px 12px",display:"inline-block"}}>
+                      Dosya seç ve yükle
+                      <input type="file" style={{display:"none"}} onChange={e=>dosyaYukle(dep, e.target.files[0])}/>
+                    </label>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </section>
 
         <h2>Projeler</h2>
+        <div style={{display:"flex",gap:10,margin:"0 0 14px",flexWrap:"wrap",alignItems:"center"}}>
+          <select value={tedFiltre} onChange={e=>setTedFiltre(e.target.value)} style={{padding:"9px 12px",border:"1px solid #cbd3de",borderRadius:10,fontSize:13.5}}>
+            <option value="">Tüm tedarikçiler</option>
+            {tedarikcilerProje.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={asamaFiltre} onChange={e=>setAsamaFiltre(e.target.value)} style={{padding:"9px 12px",border:"1px solid #cbd3de",borderRadius:10,fontSize:13.5}}>
+            <option value="">Tüm aşamalar</option>
+            {asamalarProje.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+          <input value={projeAra} onChange={e=>setProjeAra(e.target.value)} placeholder="Ara..." style={{padding:"9px 12px",border:"1px solid #cbd3de",borderRadius:10,fontSize:13.5,flex:1,minWidth:160}}/>
+          <span style={{fontSize:12,color:"var(--ink3)"}}>{projelerGosterilen.length} / {projeler.length}</span>
+        </div>
         <div className="grid">
-          {projeler.map(p => (
+          {projelerGosterilen.map(p => (
             <a key={p.kod} className="pcard" href={"/spec/"+p.kod}>
               <div className="ted">{p.suppliers?.ad || "—"} · Spec {p.spec_no}</div>
               <div className="ad">{p.ad}</div>
@@ -186,6 +246,7 @@ export default function Dashboard() {
               {p.bedel ? <div style={{fontSize:12.5,color:"var(--ink2)",marginTop:8}}>{p.bedel}</div> : null}
             </a>
           ))}
+          {projelerGosterilen.length===0 && <div style={{fontSize:13,color:"var(--ink3)"}}>Filtreye uyan proje yok.</div>}
         </div>
 
         {belgeler.length > 0 && (

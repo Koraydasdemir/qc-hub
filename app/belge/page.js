@@ -5,6 +5,11 @@ import { supabase } from "../../lib/supabase";
 import Ust from "../../components/Ust";
 
 const KARARLAR = ["Olduğu Gibi Kullanım / Use as is","Tamir / Repair","İade / Return to Vendor","Yeniden yapım / Rework","Hurda / Scrap","Diğer / Other"];
+const BASIT_TURLER = {
+  ITP: { ad: "ITP", itemKey: "kalite_itp" },
+  PROGRESS: { ad: "Progress Report", itemKey: "kalite_progress" },
+  OBS: { ad: "Observation Report", itemKey: "kalite_obs" },
+};
 
 export default function BelgeHazirla() {
   const router = useRouter();
@@ -19,17 +24,71 @@ export default function BelgeHazirla() {
   const [durum, setDurum] = useState("");
   const [bekle, setBekle] = useState(false);
 
+  const [specler, setSpecler] = useState([]);
+  const [specKod, setSpecKod] = useState("");
+  const [basitFile, setBasitFile] = useState(null);
+  const [tqBaslik, setTqBaslik] = useState("");
+
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push("/login"); return; }
-      const [{ data: sup }, { data: pr }] = await Promise.all([
+      const [{ data: sup }, { data: pr }, { data: sp }] = await Promise.all([
         supabase.from("suppliers").select("id,kod,ad").order("kod"),
         supabase.from("profiles").select("ad_soyad").eq("id", session.user.id).single(),
+        supabase.from("projects").select("kod,ad,spec_no,suppliers(ad)").order("id"),
       ]);
-      setSuppliers(sup || []); setProfil(pr);
+      setSuppliers(sup || []); setProfil(pr); setSpecler(sp || []);
     })();
   }, []);
+
+  async function basitBelgeOlustur(e) {
+    e.preventDefault();
+    if (!specKod) { setDurum("Spesifikasyon seçin"); return; }
+    if (!basitFile) { setDurum("Dosya seçin"); return; }
+    setBekle(true); setDurum("Yükleniyor...");
+    try {
+      const { data: proje } = await supabase.from("projects").select("id").eq("kod", specKod).single();
+      const path = specKod + "/" + tur + "_" + Date.now() + "_" + basitFile.name.replace(/[^\w.\-]/g,"_");
+      const { error: upErr } = await supabase.storage.from("is-akisi").upload(path, basitFile, { upsert:false });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("is-akisi").getPublicUrl(path);
+      const { error } = await supabase.from("workflow_items").upsert({
+        project_id: proje.id, item_key: BASIT_TURLER[tur].itemKey, file_url: pub.publicUrl,
+        file_tarih: new Date().toISOString().slice(0,10), status: "green",
+        updated_at: new Date().toISOString(), updated_by: profil?.ad_soyad || null,
+      }, { onConflict: "project_id,item_key" });
+      if (error) throw error;
+      router.push("/spec/" + specKod);
+    } catch (err) {
+      setDurum("Hata: " + (err.message || err)); setBekle(false);
+    }
+  }
+
+  async function tqOlustur(e) {
+    e.preventDefault();
+    if (!specKod) { setDurum("Spesifikasyon seçin"); return; }
+    if (!tqBaslik.trim()) { setDurum("TQ başlığı yazın"); return; }
+    setBekle(true); setDurum("Oluşturuluyor...");
+    try {
+      const { data: proje } = await supabase.from("projects").select("id").eq("kod", specKod).single();
+      let dosya_url = null;
+      if (basitFile) {
+        const path = specKod + "/tq_" + Date.now() + "_" + basitFile.name.replace(/[^\w.\-]/g,"_");
+        const { error: upErr } = await supabase.storage.from("is-akisi").upload(path, basitFile, { upsert:false });
+        if (upErr) throw upErr;
+        dosya_url = supabase.storage.from("is-akisi").getPublicUrl(path).data.publicUrl;
+      }
+      const { error } = await supabase.from("ncr_tq_items").insert({
+        project_id: proje.id, tur: "tq", baslik: tqBaslik.trim(), dosya_url, durum: "acik",
+        giren: profil?.ad_soyad || null, tarih: new Date().toLocaleDateString("tr-TR"),
+      });
+      if (error) throw error;
+      router.push("/spec/" + specKod);
+    } catch (err) {
+      setDurum("Hata: " + (err.message || err)); setBekle(false);
+    }
+  }
 
   async function olustur(e) {
     e.preventDefault();
@@ -76,16 +135,66 @@ export default function BelgeHazirla() {
         <p style={{color:"var(--ink2)",fontSize:13,marginTop:0}}>Numara, tarihler, tespit eden ve onaylayan otomatik atanır; uygunsuzluk tanımını siz yazarsınız.</p>
 
         <section>
-          <div style={{display:"flex",gap:10,marginBottom:16}}>
-            {["NCR","DOF"].map(t => (
-              <button key={t} onClick={()=>setTur(t)} type="button"
-                style={{padding:"10px 22px",borderRadius:20,border:"1.5px solid",cursor:"pointer",fontWeight:600,fontSize:14,
+          <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+            {[["NCR","NCR (Uygunsuzluk)"],["DOF","DÖF (Düzeltici Faaliyet)"],["ITP","ITP"],["TQ","TQ (Technical Query)"],["PROGRESS","Progress Report"],["OBS","Observation Report"]].map(([t,l]) => (
+              <button key={t} onClick={()=>{setTur(t);setDurum("");}} type="button"
+                style={{padding:"10px 20px",borderRadius:20,border:"1.5px solid",cursor:"pointer",fontWeight:600,fontSize:13.5,
                   borderColor: tur===t?"#16304f":"#cdd6e2", background: tur===t?"#16304f":"#fff", color: tur===t?"#fff":"#16304f"}}>
-                {t==="NCR"?"NCR (Uygunsuzluk)":"DÖF (Düzeltici Faaliyet)"}
+                {l}
               </button>
             ))}
           </div>
 
+          {(tur==="ITP" || tur==="PROGRESS" || tur==="OBS") && (
+            <form onSubmit={basitBelgeOlustur}>
+              <div style={{maxWidth:420}}>
+                <label style={{fontSize:12.5,color:"#586173",fontWeight:600}}>Spesifikasyon</label><br/>
+                <select value={specKod} onChange={e=>setSpecKod(e.target.value)}
+                  style={{width:"100%",marginTop:5,padding:"11px 13px",border:"1px solid #cbd3de",borderRadius:10,fontSize:14}}>
+                  <option value="">Seçiniz...</option>
+                  {specler.map(s => <option key={s.kod} value={s.kod}>{s.suppliers?.ad || "—"} — {s.ad} (Spec {s.spec_no})</option>)}
+                </select>
+              </div>
+              <label style={{fontSize:12.5,color:"#586173",fontWeight:600,display:"block",marginTop:14}}>{BASIT_TURLER[tur].ad} dosyası</label>
+              <input type="file" onChange={e=>setBasitFile(e.target.files[0])} style={{marginTop:6,fontSize:13}}/>
+              <div style={{marginTop:18,display:"flex",gap:14,alignItems:"center",flexWrap:"wrap"}}>
+                <button type="submit" disabled={bekle}
+                  style={{padding:"13px 28px",background:"#16304f",color:"#fff",border:"none",borderRadius:11,fontSize:15,fontWeight:600,cursor:"pointer",boxShadow:"0 4px 14px rgba(22,48,79,.28)"}}>
+                  {bekle ? "Yükleniyor..." : "Yükle"}
+                </button>
+                {durum && <span style={{fontSize:13,color: durum.startsWith("Hata")?"#b3261e":"var(--ink2)"}}>{durum}</span>}
+              </div>
+              <p style={{fontSize:12,color:"var(--ink3)",marginTop:10}}>Yüklenen dosya, ilgili spesifikasyonun İş akışı → Kalite Kontrol bölümünde görünür.</p>
+            </form>
+          )}
+
+          {tur==="TQ" && (
+            <form onSubmit={tqOlustur}>
+              <div style={{maxWidth:420}}>
+                <label style={{fontSize:12.5,color:"#586173",fontWeight:600}}>Spesifikasyon</label><br/>
+                <select value={specKod} onChange={e=>setSpecKod(e.target.value)}
+                  style={{width:"100%",marginTop:5,padding:"11px 13px",border:"1px solid #cbd3de",borderRadius:10,fontSize:14}}>
+                  <option value="">Seçiniz...</option>
+                  {specler.map(s => <option key={s.kod} value={s.kod}>{s.suppliers?.ad || "—"} — {s.ad} (Spec {s.spec_no})</option>)}
+                </select>
+              </div>
+              <label style={{fontSize:12.5,color:"#586173",fontWeight:600,display:"block",marginTop:14}}>TQ başlığı</label>
+              <input value={tqBaslik} onChange={e=>setTqBaslik(e.target.value)} placeholder="Örn. Malzeme spesifikasyonu ile ilgili soru"
+                style={{width:"100%",maxWidth:420,marginTop:5,padding:"11px 13px",border:"1px solid #cbd3de",borderRadius:10,fontSize:14}}/>
+              <label style={{fontSize:12.5,color:"#586173",fontWeight:600,display:"block",marginTop:14}}>Dosya (opsiyonel)</label>
+              <input type="file" onChange={e=>setBasitFile(e.target.files[0])} style={{marginTop:6,fontSize:13}}/>
+              <div style={{marginTop:18,display:"flex",gap:14,alignItems:"center",flexWrap:"wrap"}}>
+                <button type="submit" disabled={bekle}
+                  style={{padding:"13px 28px",background:"#16304f",color:"#fff",border:"none",borderRadius:11,fontSize:15,fontWeight:600,cursor:"pointer",boxShadow:"0 4px 14px rgba(22,48,79,.28)"}}>
+                  {bekle ? "Oluşturuluyor..." : "TQ oluştur"}
+                </button>
+                {durum && <span style={{fontSize:13,color: durum.startsWith("Hata")?"#b3261e":"var(--ink2)"}}>{durum}</span>}
+              </div>
+              <p style={{fontSize:12,color:"var(--ink3)",marginTop:10}}>Oluşturulan TQ, ilgili spesifikasyonun İş akışı → Kalite Kontrol bölümünde açık olarak listelenir.</p>
+            </form>
+          )}
+
+          {(tur==="NCR" || tur==="DOF") && (
           <form onSubmit={olustur}>
             <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-end"}}>
               <div style={{minWidth:220}}>
@@ -139,6 +248,7 @@ export default function BelgeHazirla() {
               {durum && <span style={{fontSize:13,color: durum.startsWith("Hata")?"#b3261e":"var(--ink2)"}}>{durum}</span>}
             </div>
           </form>
+          )}
         </section>
       </div>
     </>

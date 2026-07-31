@@ -51,6 +51,10 @@ export default function Ust() {
           </div>
         </a>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <a href="/" style={{ display: "flex", alignItems: "center", gap: 6, color: "#fff", textDecoration: "none",
+            border: "1px solid rgba(255,255,255,.35)", borderRadius: 9, padding: "7px 14px", fontSize: 13, fontWeight: 600 }}>
+            🏠 Ana ekran
+          </a>
           <span className="kim">
             {ad ? <>{ad}{gorev ? " · " + gorev : ""}</> : ""}
           </span>
