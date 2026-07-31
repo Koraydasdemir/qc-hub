@@ -15,9 +15,14 @@ export default function Login() {
     setHata(""); setBekle(true);
     const eposta = k.includes("@") ? k.trim() : (KULLANICI_EPOSTA[k.trim()] || "");
     if (!eposta) { setHata("Kullanıcı bulunamadı"); setBekle(false); return; }
-    const { error } = await supabase.auth.signInWithPassword({ email: eposta, password: s });
+    const { data, error } = await supabase.auth.signInWithPassword({ email: eposta, password: s });
     setBekle(false);
     if (error) { setHata("Kullanıcı adı veya şifre hatalı"); return; }
+    try {
+      const { data: prof } = await supabase.from("profiles").select("ad_soyad").eq("id", data.user.id).single();
+      const { data: oturum } = await supabase.from("login_sessions").insert({ kullanici: prof?.ad_soyad || k.trim() }).select().single();
+      if (oturum?.id) localStorage.setItem("qc_oturum_id", String(oturum.id));
+    } catch (e) { /* oturum takibi başarısız olsa da girişi engelleme */ }
     router.push("/");
   }
 

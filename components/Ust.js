@@ -58,6 +58,13 @@ export default function Ust() {
   }
 
   async function cikis() {
+    try {
+      const oturumId = localStorage.getItem("qc_oturum_id");
+      if (oturumId) {
+        await supabase.from("login_sessions").update({ cikis_zamani: new Date().toISOString() }).eq("id", oturumId);
+        localStorage.removeItem("qc_oturum_id");
+      }
+    } catch (e) { /* oturum kaydı kapatılamasa da çıkışı engelleme */ }
     await supabase.auth.signOut();
     router.push("/login");
   }
@@ -83,6 +90,13 @@ export default function Ust() {
             border: "1px solid rgba(255,255,255,.35)", borderRadius: 9, padding: "7px 14px", fontSize: 13, fontWeight: 600 }}>
             🏠 Ana ekran
           </a>
+          {admin && (
+            <a href="/oturumlar" style={{ display: "flex", alignItems: "center", gap: 6, color: "#fff", textDecoration: "none",
+              border: "1px solid rgba(255,255,255,.35)", borderRadius: 9, padding: "7px 14px", fontSize: 13, fontWeight: 600 }}
+              title="Giriş/çıkış kayıtları">
+              🕒 Oturumlar
+            </a>
+          )}
           {admin && (
             <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 6 }}>
               <button
