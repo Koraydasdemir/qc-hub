@@ -1,4 +1,5 @@
 import "./globals.css";
+import { DuzenProvider } from "../components/DuzenBaglam";
 
 export const metadata = {
   title: "Proje Yönetim Sistemi — TECHMP",
@@ -8,7 +9,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="tr">
-      <body>{children}</body>
+      <body>
+        <DuzenProvider>{children}</DuzenProvider>
+      </body>
     </html>
   );
 }

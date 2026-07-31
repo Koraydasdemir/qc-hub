@@ -3,6 +3,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import Ust from "../components/Ust";
+import Bolum from "../components/Bolum";
+import { useDuzen } from "../lib/duzen";
+
+const ANA_BOLUMLER = [
+  { key: "secim", ad: "Tedarikçi & Spesifikasyon Seçimi", varsayilanSira: 1 },
+  { key: "duyurular", ad: "Önemli duyurular", varsayilanSira: 2 },
+  { key: "dept-loglari", ad: "Departman logları", varsayilanSira: 3 },
+  { key: "projeler", ad: "Projeler", varsayilanSira: 4 },
+  { key: "son-belgeler", ad: "Son belgeler", varsayilanSira: 5 },
+];
 
 function pazartesi() {
   const d = new Date();
@@ -32,6 +42,7 @@ export default function Dashboard() {
   const [tedFiltre, setTedFiltre] = useState("");
   const [asamaFiltre, setAsamaFiltre] = useState("");
   const [projeAra, setProjeAra] = useState("");
+  const duzen = useDuzen("ana-ekran");
 
   useEffect(() => {
     (async () => {
@@ -151,122 +162,149 @@ export default function Dashboard() {
           </div>
         )}
 
-        <div className="buyuk" style={{background:"var(--card)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:"28px 30px",boxShadow:"var(--shadow)",marginTop:16}}>
-          <h2 style={{marginTop:0,fontSize:19}}>Tedarikçi &amp; Spesifikasyon Seçimi</h2>
-          <p style={{fontSize:13.5,color:"var(--ink2)",marginTop:-4}}>Sistemin giriş noktası — {katalog.length} spesifikasyonun tamamı burada. Tedarikçiyi ve spesifikasyonu seçerek ilgili ekrana geçin.</p>
-          <div style={{display:"flex",gap:18,flexWrap:"wrap",alignItems:"flex-end",marginTop:10}}>
-            <div style={{flex:1,minWidth:220}}>
-              <label style={{fontSize:13,color:"#586173",fontWeight:600}}>1 · Tedarikçi</label><br/>
-              <select value={secTed} onChange={e=>{setSecTed(e.target.value); setSecSpec("");}}
-                style={{width:"100%",marginTop:7,padding:"14px 15px",border:"1px solid #cbd3de",borderRadius:10,fontSize:15.5}}>
-                <option value="">Seçiniz...</option>
-                {tedarikciler.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div style={{flex:2,minWidth:320}}>
-              <label style={{fontSize:13,color:"#586173",fontWeight:600}}>2 · Spesifikasyon</label><br/>
-              <select value={secSpec} onChange={e=>setSecSpec(e.target.value)} disabled={!secTed}
-                style={{width:"100%",marginTop:7,padding:"14px 15px",border:"1px solid #cbd3de",borderRadius:10,fontSize:15.5}}>
-                <option value="">{secTed ? "Seçiniz..." : "Önce tedarikçi seçin"}</option>
-                {specSecenekleri.map(k => <option key={k.id} value={k.id}>Spec {k.spec_no} — {k.proje_adi} ({k.durum})</option>)}
-              </select>
-            </div>
-            <button className="arac-btn" disabled={!secSpec} onClick={specAc}
-              style={{padding:"15px 28px",fontSize:15.5,opacity: secSpec?1:.5,cursor: secSpec?"pointer":"not-allowed"}}>
-              Spesifikasyon detayları →
-            </button>
-          </div>
-        </div>
-
-        {duyurular.length > 0 && (
-          <section>
-            <h2>📢 Önemli duyurular</h2>
-            {duyurular.map(d => (
-              <div key={d.id} className={"duyuru"+(d.onemli?" onemli":"")}>
-                <b>{d.baslik}</b>
-                <p>{d.metin}</p>
-                <span style={{fontSize:11,color:"var(--ink3)"}}>{d.kimden}</span>
-              </div>
-            ))}
-          </section>
-        )}
-
-        <section style={{marginTop:16}}>
-          <h2>Departman logları</h2>
-          {mesajLog && <div style={{fontSize:13,color: mesajLog.startsWith("Hata")?"#b3261e":"var(--ink2)",marginBottom:8}}>{mesajLog}</div>}
-          <div className="grid">
-            {Object.values(deptGrup).map(({dep, loglar: dl}) => (
-              <div key={dep.kod} className="dept">
-                <b style={{display:"block",fontSize:13.5,color:"var(--navy)",marginBottom:6}}>{dep.kod} · {dep.ad}</b>
-                {dep.kod === "01" && <a href="/mentor" style={{display:"inline-block",fontSize:12,marginBottom:8,color:"var(--steel)"}}>🎓 Kalite Kontrol Mentörü →</a>}
-                {dl.length === 0 && <span style={{fontSize:12,color:"var(--ink3)"}}>log yok</span>}
-                {dl.map(l => {
-                  const bayat = l.guncelleme_tarihi && new Date(l.guncelleme_tarihi) < pzt;
-                  return (
-                    <div key={l.id} style={{fontSize:12.5,margin:"3px 0"}}>
-                      <a href={l.dosya_url} target="_blank" rel="noreferrer">→ {l.log_adi}</a>
-                      {bayat && <span style={{color:"var(--err)",fontSize:11,marginLeft:6,whiteSpace:"nowrap"}}>(Güncel değil — {l.guncelleme_tarihi})</span>}
-                    </div>
-                  );
-                })}
-                {dosyaYuklemeYetkili(dep.kod) && (
-                  <div style={{marginTop:10,borderTop:"1px solid var(--line)",paddingTop:10}}>
-                    <input value={adBaslik[dep.kod]||""} onChange={e=>setAdBaslik({...adBaslik,[dep.kod]:e.target.value})}
-                      placeholder="Log adı (örn. Finans raporu)" style={{width:"100%",padding:"7px 9px",border:"1px solid #cbd3de",borderRadius:8,fontSize:12.5,marginBottom:6}}/>
-                    <label className="arac-btn" style={{cursor:"pointer",fontSize:12,padding:"6px 12px",display:"inline-block"}}>
-                      Dosya seç ve yükle
-                      <input type="file" style={{display:"none"}} onChange={e=>dosyaYukle(dep, e.target.files[0])}/>
-                    </label>
+        {(() => {
+          const sirali = duzen.sirali(ANA_BOLUMLER);
+          const icerikler = {
+            secim: (
+              <div className="buyuk" style={{background:"var(--card)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:"28px 30px",boxShadow:"var(--shadow)",marginTop:16}}>
+                <h2 style={{marginTop:0,fontSize:19}}>{duzen.ayarlar.secim?.emoji ? duzen.ayarlar.secim.emoji+" " : ""}Tedarikçi &amp; Spesifikasyon Seçimi</h2>
+                <p style={{fontSize:13.5,color:"var(--ink2)",marginTop:-4}}>Sistemin giriş noktası — {katalog.length} spesifikasyonun tamamı burada. Tedarikçiyi ve spesifikasyonu seçerek ilgili ekrana geçin.</p>
+                <div style={{display:"flex",gap:18,flexWrap:"wrap",alignItems:"flex-end",marginTop:10}}>
+                  <div style={{flex:1,minWidth:220}}>
+                    <label style={{fontSize:13,color:"#586173",fontWeight:600}}>1 · Tedarikçi</label><br/>
+                    <select value={secTed} onChange={e=>{setSecTed(e.target.value); setSecSpec("");}}
+                      style={{width:"100%",marginTop:7,padding:"14px 15px",border:"1px solid #cbd3de",borderRadius:10,fontSize:15.5}}>
+                      <option value="">Seçiniz...</option>
+                      {tedarikciler.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
                   </div>
-                )}
+                  <div style={{flex:2,minWidth:320}}>
+                    <label style={{fontSize:13,color:"#586173",fontWeight:600}}>2 · Spesifikasyon</label><br/>
+                    <select value={secSpec} onChange={e=>setSecSpec(e.target.value)} disabled={!secTed}
+                      style={{width:"100%",marginTop:7,padding:"14px 15px",border:"1px solid #cbd3de",borderRadius:10,fontSize:15.5}}>
+                      <option value="">{secTed ? "Seçiniz..." : "Önce tedarikçi seçin"}</option>
+                      {specSecenekleri.map(k => <option key={k.id} value={k.id}>Spec {k.spec_no} — {k.proje_adi} ({k.durum})</option>)}
+                    </select>
+                  </div>
+                  <button className="arac-btn" disabled={!secSpec} onClick={specAc}
+                    style={{padding:"15px 28px",fontSize:15.5,opacity: secSpec?1:.5,cursor: secSpec?"pointer":"not-allowed"}}>
+                    Spesifikasyon detayları →
+                  </button>
+                </div>
               </div>
-            ))}
-          </div>
-        </section>
-
-        <h2>Projeler</h2>
-        <div style={{display:"flex",gap:10,margin:"0 0 14px",flexWrap:"wrap",alignItems:"center"}}>
-          <select value={tedFiltre} onChange={e=>setTedFiltre(e.target.value)} style={{padding:"9px 12px",border:"1px solid #cbd3de",borderRadius:10,fontSize:13.5}}>
-            <option value="">Tüm tedarikçiler</option>
-            {tedarikcilerProje.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <select value={asamaFiltre} onChange={e=>setAsamaFiltre(e.target.value)} style={{padding:"9px 12px",border:"1px solid #cbd3de",borderRadius:10,fontSize:13.5}}>
-            <option value="">Tüm aşamalar</option>
-            {asamalarProje.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
-          <input value={projeAra} onChange={e=>setProjeAra(e.target.value)} placeholder="Ara..." style={{padding:"9px 12px",border:"1px solid #cbd3de",borderRadius:10,fontSize:13.5,flex:1,minWidth:160}}/>
-          <span style={{fontSize:12,color:"var(--ink3)"}}>{projelerGosterilen.length} / {projeler.length}</span>
-        </div>
-        <div className="grid">
-          {projelerGosterilen.map(p => (
-            <a key={p.kod} className="pcard" href={"/spec/"+p.kod}>
-              <div className="ted">{p.suppliers?.ad || "—"} · Spec {p.spec_no}</div>
-              <div className="ad">{p.ad}</div>
-              <span className="pill" style={{background:"#e7f0fb",color:"#0c447c"}}>aşama: {p.asama}</span>
-              {p.bedel ? <div style={{fontSize:12.5,color:"var(--ink2)",marginTop:8}}>{p.bedel}</div> : null}
-            </a>
-          ))}
-          {projelerGosterilen.length===0 && <div style={{fontSize:13,color:"var(--ink3)"}}>Filtreye uyan proje yok.</div>}
-        </div>
-
-        {belgeler.length > 0 && (
-          <section style={{marginTop:20}}>
-            <h2>Son belgeler</h2>
-            <table>
-              <thead><tr><th>Belge</th><th>Tür</th><th>Tespit eden</th><th>Durum</th></tr></thead>
-              <tbody>
-                {belgeler.map(b => (
-                  <tr key={b.kod}>
-                    <td><a href={"/belge/"+encodeURIComponent(b.kod)}>{b.kod}</a></td>
-                    <td>{b.tur}</td>
-                    <td>{b.tespit_eden}</td>
-                    <td>{b.durum}</td>
-                  </tr>
+            ),
+            duyurular: duyurular.length > 0 && (
+              <section>
+                <h2>{duzen.ayarlar.duyurular?.emoji || "📢"} Önemli duyurular</h2>
+                {duyurular.map(d => (
+                  <div key={d.id} className={"duyuru"+(d.onemli?" onemli":"")}>
+                    <b>{d.baslik}</b>
+                    <p>{d.metin}</p>
+                    <span style={{fontSize:11,color:"var(--ink3)"}}>{d.kimden}</span>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </section>
-        )}
+              </section>
+            ),
+            "dept-loglari": (
+              <section style={{marginTop:16}}>
+                <h2>{duzen.ayarlar["dept-loglari"]?.emoji ? duzen.ayarlar["dept-loglari"].emoji+" " : ""}Departman logları</h2>
+                {mesajLog && <div style={{fontSize:13,color: mesajLog.startsWith("Hata")?"#b3261e":"var(--ink2)",marginBottom:8}}>{mesajLog}</div>}
+                <div className="grid">
+                  {Object.values(deptGrup).map(({dep, loglar: dl}) => (
+                    <div key={dep.kod} className="dept">
+                      <b style={{display:"block",fontSize:13.5,color:"var(--navy)",marginBottom:6}}>{dep.kod} · {dep.ad}</b>
+                      {dep.kod === "01" && <a href="/mentor" style={{display:"inline-block",fontSize:12,marginBottom:8,color:"var(--steel)"}}>🎓 Kalite Kontrol Mentörü →</a>}
+                      {dl.length === 0 && <span style={{fontSize:12,color:"var(--ink3)"}}>log yok</span>}
+                      {dl.map(l => {
+                        const bayat = l.guncelleme_tarihi && new Date(l.guncelleme_tarihi) < pzt;
+                        return (
+                          <div key={l.id} style={{fontSize:12.5,margin:"3px 0"}}>
+                            <a href={l.dosya_url} target="_blank" rel="noreferrer">→ {l.log_adi}</a>
+                            {bayat && <span style={{color:"var(--err)",fontSize:11,marginLeft:6,whiteSpace:"nowrap"}}>(Güncel değil — {l.guncelleme_tarihi})</span>}
+                          </div>
+                        );
+                      })}
+                      {dosyaYuklemeYetkili(dep.kod) && (
+                        <div style={{marginTop:10,borderTop:"1px solid var(--line)",paddingTop:10}}>
+                          <input value={adBaslik[dep.kod]||""} onChange={e=>setAdBaslik({...adBaslik,[dep.kod]:e.target.value})}
+                            placeholder="Log adı (örn. Finans raporu)" style={{width:"100%",padding:"7px 9px",border:"1px solid #cbd3de",borderRadius:8,fontSize:12.5,marginBottom:6}}/>
+                          <label className="arac-btn" style={{cursor:"pointer",fontSize:12,padding:"6px 12px",display:"inline-block"}}>
+                            Dosya seç ve yükle
+                            <input type="file" style={{display:"none"}} onChange={e=>dosyaYukle(dep, e.target.files[0])}/>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ),
+            projeler: (
+              <section>
+                <h2>{duzen.ayarlar.projeler?.emoji ? duzen.ayarlar.projeler.emoji+" " : ""}Projeler</h2>
+                <div style={{display:"flex",gap:10,margin:"0 0 14px",flexWrap:"wrap",alignItems:"center"}}>
+                  <select value={tedFiltre} onChange={e=>setTedFiltre(e.target.value)} style={{padding:"9px 12px",border:"1px solid #cbd3de",borderRadius:10,fontSize:13.5}}>
+                    <option value="">Tüm tedarikçiler</option>
+                    {tedarikcilerProje.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  <select value={asamaFiltre} onChange={e=>setAsamaFiltre(e.target.value)} style={{padding:"9px 12px",border:"1px solid #cbd3de",borderRadius:10,fontSize:13.5}}>
+                    <option value="">Tüm aşamalar</option>
+                    {asamalarProje.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                  <input value={projeAra} onChange={e=>setProjeAra(e.target.value)} placeholder="Ara..." style={{padding:"9px 12px",border:"1px solid #cbd3de",borderRadius:10,fontSize:13.5,flex:1,minWidth:160}}/>
+                  <span style={{fontSize:12,color:"var(--ink3)"}}>{projelerGosterilen.length} / {projeler.length}</span>
+                </div>
+                <div className="grid">
+                  {projelerGosterilen.map(p => (
+                    <a key={p.kod} className="pcard" href={"/spec/"+p.kod}>
+                      <div className="ted">{p.suppliers?.ad || "—"} · Spec {p.spec_no}</div>
+                      <div className="ad">{p.ad}</div>
+                      <span className="pill" style={{background:"#e7f0fb",color:"#0c447c"}}>aşama: {p.asama}</span>
+                      {p.bedel ? <div style={{fontSize:12.5,color:"var(--ink2)",marginTop:8}}>{p.bedel}</div> : null}
+                    </a>
+                  ))}
+                  {projelerGosterilen.length===0 && <div style={{fontSize:13,color:"var(--ink3)"}}>Filtreye uyan proje yok.</div>}
+                </div>
+              </section>
+            ),
+            "son-belgeler": belgeler.length > 0 && (
+              <section style={{marginTop:20}}>
+                <h2>{duzen.ayarlar["son-belgeler"]?.emoji ? duzen.ayarlar["son-belgeler"].emoji+" " : ""}Son belgeler</h2>
+                <table>
+                  <thead><tr><th>Belge</th><th>Tür</th><th>Tespit eden</th><th>Durum</th></tr></thead>
+                  <tbody>
+                    {belgeler.map(b => (
+                      <tr key={b.kod}>
+                        <td><a href={"/belge/"+encodeURIComponent(b.kod)}>{b.kod}</a></td>
+                        <td>{b.tur}</td>
+                        <td>{b.tespit_eden}</td>
+                        <td>{b.durum}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+            ),
+          };
+          return sirali.map((b, idx) => (
+            <Bolum
+              key={b.key}
+              bolumKey={b.key}
+              ayar={duzen.ayarlar[b.key]}
+              admin={admin}
+              baslik={b.ad}
+              ilkMi={idx === 0}
+              sonMu={idx === sirali.length - 1}
+              onTasiYukari={() => duzen.tasi(ANA_BOLUMLER, b.key, -1, me?.ad_soyad)}
+              onTasiAsagi={() => duzen.tasi(ANA_BOLUMLER, b.key, 1, me?.ad_soyad)}
+              onGizleGoster={(g) => duzen.gizleGoster(b.key, g, me?.ad_soyad)}
+              onEmoji={(e) => duzen.emojiAyarla(b.key, e, me?.ad_soyad)}
+              onRenk={(r) => duzen.renkAyarla(b.key, r, me?.ad_soyad)}
+            >
+              {icerikler[b.key]}
+            </Bolum>
+          ));
+        })()}
       </div>
     </>
   );

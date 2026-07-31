@@ -3,6 +3,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import Ust from "../../../components/Ust";
+import Bolum from "../../../components/Bolum";
+import { useDuzen } from "../../../lib/duzen";
+
+const SPEC_BOLUMLER = [
+  { key: "isakisi", ad: "İş akışı", varsayilanSira: 1 },
+  { key: "roadmap", ad: "Project Roadmap / Üretim-İmalat", varsayilanSira: 2 },
+  { key: "departman", ad: "Departman durumu", varsayilanSira: 3 },
+  { key: "kritik", ad: "Kritik konular / Uyarılar", varsayilanSira: 4 },
+];
 
 const DEPT_AD = {"01":"Kalite Kontrol","02":"Finance","03":"Accounting","04":"Technical Office",
   "05":"Procurement","06":"Legal Affairs","07":"Logistics & Customs","08":"Administrative"};
@@ -86,6 +95,7 @@ export default function Spec({ params }) {
   const [atamaAcikKat, setAtamaAcikKat] = useState(null);
   const [secAcik, setSecAcik] = useState({ isAkisi:true, roadmap:true, uretim:true, departman:true, kritik:true });
   function secToggle(k) { setSecAcik({ ...secAcik, [k]: !secAcik[k] }); }
+  const duzen = useDuzen("spec-detay");
 
   const bosOdemeler = () => ([
     { name: "Advance Payment", amount: "", paid: false },
@@ -466,6 +476,13 @@ export default function Spec({ params }) {
         <div style={{fontSize:13,color:"var(--ink2)"}}>Spec {p.spec_no} · aşama: {p.asama} {p.bedel?"· "+p.bedel:""}</div>
         {mesaj && <div style={{marginTop:8,fontSize:13,color: mesaj.startsWith("Hata")?"#b3261e":"var(--ink2)"}}>{mesaj}</div>}
 
+        <div style={{display:"flex",flexDirection:"column"}}>
+
+        <Bolum bolumKey="isakisi" ayar={duzen.ayarlar.isakisi} admin={!!me?.admin} baslik="İş akışı"
+          ilkMi={duzen.sirali(SPEC_BOLUMLER)[0]?.key==="isakisi"} sonMu={duzen.sirali(SPEC_BOLUMLER).slice(-1)[0]?.key==="isakisi"}
+          onTasiYukari={()=>duzen.tasi(SPEC_BOLUMLER,"isakisi",-1,me?.ad_soyad)} onTasiAsagi={()=>duzen.tasi(SPEC_BOLUMLER,"isakisi",1,me?.ad_soyad)}
+          onGizleGoster={(g)=>duzen.gizleGoster("isakisi",g,me?.ad_soyad)} onEmoji={(e)=>duzen.emojiAyarla("isakisi",e,me?.ad_soyad)} onRenk={(r)=>duzen.renkAyarla("isakisi",r,me?.ad_soyad)}>
+        <div style={{order: duzen.ayarlar.isakisi?.sira ?? 1}}>
         <section style={{marginTop:16}}>
           <div onClick={()=>secToggle("isAkisi")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
             <h2 style={{margin:0}}>İş akışı</h2>
@@ -559,7 +576,14 @@ export default function Spec({ params }) {
             @keyframes rowBlink { 0%,100%{opacity:1;} 50%{opacity:0.55;} }
           `}</style>
         </section>
+        </div>
+        </Bolum>
 
+        <Bolum bolumKey="roadmap" ayar={duzen.ayarlar.roadmap} admin={!!me?.admin} baslik="Project Roadmap / Üretim-İmalat"
+          ilkMi={duzen.sirali(SPEC_BOLUMLER)[0]?.key==="roadmap"} sonMu={duzen.sirali(SPEC_BOLUMLER).slice(-1)[0]?.key==="roadmap"}
+          onTasiYukari={()=>duzen.tasi(SPEC_BOLUMLER,"roadmap",-1,me?.ad_soyad)} onTasiAsagi={()=>duzen.tasi(SPEC_BOLUMLER,"roadmap",1,me?.ad_soyad)}
+          onGizleGoster={(g)=>duzen.gizleGoster("roadmap",g,me?.ad_soyad)} onEmoji={(e)=>duzen.emojiAyarla("roadmap",e,me?.ad_soyad)} onRenk={(r)=>duzen.renkAyarla("roadmap",r,me?.ad_soyad)}>
+        <div style={{order: duzen.ayarlar.roadmap?.sira ?? 2}}>
         <section style={{marginTop:16}}>
           <div onClick={()=>secToggle("roadmap")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
             <h2 style={{margin:0}}>Project Roadmap</h2>
@@ -732,7 +756,14 @@ export default function Spec({ params }) {
           )}
           </>}
         </section>
+        </div>
+        </Bolum>
 
+        <Bolum bolumKey="departman" ayar={duzen.ayarlar.departman} admin={!!me?.admin} baslik="Departman durumu"
+          ilkMi={duzen.sirali(SPEC_BOLUMLER)[0]?.key==="departman"} sonMu={duzen.sirali(SPEC_BOLUMLER).slice(-1)[0]?.key==="departman"}
+          onTasiYukari={()=>duzen.tasi(SPEC_BOLUMLER,"departman",-1,me?.ad_soyad)} onTasiAsagi={()=>duzen.tasi(SPEC_BOLUMLER,"departman",1,me?.ad_soyad)}
+          onGizleGoster={(g)=>duzen.gizleGoster("departman",g,me?.ad_soyad)} onEmoji={(e)=>duzen.emojiAyarla("departman",e,me?.ad_soyad)} onRenk={(r)=>duzen.renkAyarla("departman",r,me?.ad_soyad)}>
+        <div style={{order: duzen.ayarlar.departman?.sira ?? 3}}>
         <section>
           <div onClick={()=>secToggle("departman")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
             <h2 style={{margin:0}}>Departman durumu</h2>
@@ -774,7 +805,14 @@ export default function Spec({ params }) {
           </div>
           </>}
         </section>
+        </div>
+        </Bolum>
 
+        <Bolum bolumKey="kritik" ayar={duzen.ayarlar.kritik} admin={!!me?.admin} baslik="Kritik konular / Uyarılar"
+          ilkMi={duzen.sirali(SPEC_BOLUMLER)[0]?.key==="kritik"} sonMu={duzen.sirali(SPEC_BOLUMLER).slice(-1)[0]?.key==="kritik"}
+          onTasiYukari={()=>duzen.tasi(SPEC_BOLUMLER,"kritik",-1,me?.ad_soyad)} onTasiAsagi={()=>duzen.tasi(SPEC_BOLUMLER,"kritik",1,me?.ad_soyad)}
+          onGizleGoster={(g)=>duzen.gizleGoster("kritik",g,me?.ad_soyad)} onEmoji={(e)=>duzen.emojiAyarla("kritik",e,me?.ad_soyad)} onRenk={(r)=>duzen.renkAyarla("kritik",r,me?.ad_soyad)}>
+        <div style={{order: duzen.ayarlar.kritik?.sira ?? 4}}>
         <section style={{marginTop:16, border: alarmlar.length>0 ? "1px solid #d1352b" : undefined, background: alarmlar.length>0 ? "#fff5f4" : undefined}}>
           <div onClick={()=>secToggle("kritik")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
             <h2 style={{margin:0,color: alarmlar.length>0 ? "#b3261e" : undefined}}>⚠ Kritik konular / Uyarılar</h2>
@@ -809,6 +847,10 @@ export default function Spec({ params }) {
           `}</style>
           </>}
         </section>
+        </div>
+        </Bolum>
+
+        </div>
       </div>
     </>
   );
