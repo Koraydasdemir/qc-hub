@@ -1,32 +1,66 @@
 "use client";
+import { useEffect, useState } from "react";
 import { useDuzenMod } from "./DuzenBaglam";
+
+const GENISLIK_SECENEKLERI = [
+  { v: "", ad: "Tam (100%)" },
+  { v: "75%", ad: "Geniş (75%)" },
+  { v: "60%", ad: "Orta (60%)" },
+  { v: "40%", ad: "Dar (40%)" },
+];
 
 // Herhangi bir sayfadaki bir "bölüm"ü sarmalayan bileşen.
 // admin + editMod açıkken üstte küçük bir düzenleme araç çubuğu gösterir:
-// ▲ yukarı taşı, ▼ aşağı taşı, 👁 gizle/göster, emoji kutusu, renk kutusu.
+// ▲ yukarı taşı, ▼ aşağı taşı, 👁 gizle/göster, emoji kutusu, renk kutusu, genişlik seçici, 💾 Kaydet.
 // Props:
-//  - key bilgisi: bolumKey (layout_settings.bolum_key ile eşleşir)
-//  - ayar: { sira, gizli, emoji, renk } (useDuzen'den ayarlar[bolumKey])
+//  - bolumKey (layout_settings.bolum_key ile eşleşir)
+//  - ayar: { sira, gizli, emoji, renk, genislik } (useDuzen'den ayarlar[bolumKey])
 //  - admin: boolean
-//  - baslik: varsayılan başlık metni (emoji override edilirse önüne eklenir)
-//  - onTasiYukari / onTasiAsagi / onGizleGoster / onEmoji / onRenk : callback'ler
+//  - baslik: varsayılan başlık metni
+//  - onTasiYukari / onTasiAsagi / onGizleGoster : anında uygulanan callback'ler
+//  - onKaydet(alanlar): { emoji, renk, genislik } — "Kaydet" butonuna basınca tek seferde çağrılır
 //  - ilkMi / sonMu: taşıma oklarını disable etmek için
 //  - children: bölümün asıl içeriği
 export default function Bolum({
-  bolumKey, ayar, admin, baslik, onTasiYukari, onTasiAsagi, onGizleGoster, onEmoji, onRenk,
+  bolumKey, ayar, admin, baslik, onTasiYukari, onTasiAsagi, onGizleGoster, onKaydet,
   ilkMi, sonMu, children,
 }) {
   const { editMod } = useDuzenMod();
   const gizli = !!ayar?.gizli;
   const renk = ayar?.renk || null;
+  const genislik = ayar?.genislik || "";
+
+  const [taslakEmoji, setTaslakEmoji] = useState(ayar?.emoji || "");
+  const [taslakRenk, setTaslakRenk] = useState(renk || "#cccccc");
+  const [taslakGenislik, setTaslakGenislik] = useState(genislik);
+  const [kaydediliyor, setKaydediliyor] = useState(false);
+
+  useEffect(() => {
+    setTaslakEmoji(ayar?.emoji || "");
+    setTaslakRenk(ayar?.renk || "#cccccc");
+    setTaslakGenislik(ayar?.genislik || "");
+  }, [ayar?.emoji, ayar?.renk, ayar?.genislik]);
+
+  const degisiklikVar =
+    taslakEmoji !== (ayar?.emoji || "") ||
+    taslakRenk !== (ayar?.renk || "#cccccc") ||
+    taslakGenislik !== (ayar?.genislik || "");
 
   if (gizli && !(editMod && admin)) return null;
 
   const gosterAracCubugu = editMod && admin;
 
+  async function kaydet() {
+    setKaydediliyor(true);
+    await onKaydet({ emoji: taslakEmoji || null, renk: taslakRenk === "#cccccc" ? null : taslakRenk, genislik: taslakGenislik || null });
+    setKaydediliyor(false);
+  }
+
   return (
     <div
       style={{
+        width: genislik || "100%",
+        margin: genislik ? "0 auto" : undefined,
         border: renk ? `2px solid ${renk}` : undefined,
         borderRadius: renk ? 10 : undefined,
         padding: renk ? 8 : undefined,
@@ -52,20 +86,35 @@ export default function Bolum({
           <button type="button" onClick={() => onGizleGoster(!gizli)}>
             {gizli ? "👁 Göster" : "🙈 Gizle"}
           </button>
+          <span style={{ color: "#bbb" }}>|</span>
           <input
-            type="text" placeholder="emoji" defaultValue={ayar?.emoji || ""}
-            onBlur={(e) => onEmoji(e.target.value)}
+            type="text" placeholder="emoji" value={taslakEmoji}
+            onChange={(e) => setTaslakEmoji(e.target.value)}
             style={{ width: 46, fontSize: 12, padding: "2px 4px" }}
           />
           <input
-            type="color" defaultValue={renk || "#cccccc"}
-            onChange={(e) => onRenk(e.target.value)}
+            type="color" value={taslakRenk}
+            onChange={(e) => setTaslakRenk(e.target.value)}
             style={{ width: 28, height: 22, padding: 0, border: "none", background: "none" }}
             title="Renk seç"
           />
-          {renk && (
-            <button type="button" onClick={() => onRenk(null)} title="Rengi kaldır">✕ renk</button>
+          {taslakRenk !== "#cccccc" && (
+            <button type="button" onClick={() => setTaslakRenk("#cccccc")} title="Rengi kaldır">✕ renk</button>
           )}
+          <select value={taslakGenislik} onChange={(e) => setTaslakGenislik(e.target.value)}
+            style={{ fontSize: 12, padding: "2px 4px" }} title="Bölüm genişliği">
+            {GENISLIK_SECENEKLERI.map(g => <option key={g.v} value={g.v}>{g.ad}</option>)}
+          </select>
+          <button
+            type="button" onClick={kaydet} disabled={!degisiklikVar || kaydediliyor}
+            style={{
+              fontWeight: 600, cursor: degisiklikVar ? "pointer" : "default",
+              opacity: degisiklikVar ? 1 : 0.4, background: degisiklikVar ? "#0f7a5f" : "#ddd",
+              color: degisiklikVar ? "#fff" : "#666", border: "none", borderRadius: 6, padding: "3px 10px",
+            }}
+          >
+            {kaydediliyor ? "Kaydediliyor..." : "💾 Kaydet"}
+          </button>
         </div>
       )}
       {children}

@@ -481,7 +481,7 @@ export default function Spec({ params }) {
         <Bolum bolumKey="isakisi" ayar={duzen.ayarlar.isakisi} admin={!!me?.admin} baslik="İş akışı"
           ilkMi={duzen.sirali(SPEC_BOLUMLER)[0]?.key==="isakisi"} sonMu={duzen.sirali(SPEC_BOLUMLER).slice(-1)[0]?.key==="isakisi"}
           onTasiYukari={()=>duzen.tasi(SPEC_BOLUMLER,"isakisi",-1,me?.ad_soyad)} onTasiAsagi={()=>duzen.tasi(SPEC_BOLUMLER,"isakisi",1,me?.ad_soyad)}
-          onGizleGoster={(g)=>duzen.gizleGoster("isakisi",g,me?.ad_soyad)} onEmoji={(e)=>duzen.emojiAyarla("isakisi",e,me?.ad_soyad)} onRenk={(r)=>duzen.renkAyarla("isakisi",r,me?.ad_soyad)}>
+          onGizleGoster={(g)=>duzen.gizleGoster("isakisi",g,me?.ad_soyad)} onKaydet={(a)=>duzen.toplukaydet("isakisi",a,me?.ad_soyad)}>
         <div style={{order: duzen.ayarlar.isakisi?.sira ?? 1}}>
         <section style={{marginTop:16}}>
           <div onClick={()=>secToggle("isAkisi")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
@@ -582,7 +582,7 @@ export default function Spec({ params }) {
         <Bolum bolumKey="roadmap" ayar={duzen.ayarlar.roadmap} admin={!!me?.admin} baslik="Project Roadmap / Üretim-İmalat"
           ilkMi={duzen.sirali(SPEC_BOLUMLER)[0]?.key==="roadmap"} sonMu={duzen.sirali(SPEC_BOLUMLER).slice(-1)[0]?.key==="roadmap"}
           onTasiYukari={()=>duzen.tasi(SPEC_BOLUMLER,"roadmap",-1,me?.ad_soyad)} onTasiAsagi={()=>duzen.tasi(SPEC_BOLUMLER,"roadmap",1,me?.ad_soyad)}
-          onGizleGoster={(g)=>duzen.gizleGoster("roadmap",g,me?.ad_soyad)} onEmoji={(e)=>duzen.emojiAyarla("roadmap",e,me?.ad_soyad)} onRenk={(r)=>duzen.renkAyarla("roadmap",r,me?.ad_soyad)}>
+          onGizleGoster={(g)=>duzen.gizleGoster("roadmap",g,me?.ad_soyad)} onKaydet={(a)=>duzen.toplukaydet("roadmap",a,me?.ad_soyad)}>
         <div style={{order: duzen.ayarlar.roadmap?.sira ?? 2}}>
         <section style={{marginTop:16}}>
           <div onClick={()=>secToggle("roadmap")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
@@ -762,7 +762,7 @@ export default function Spec({ params }) {
         <Bolum bolumKey="departman" ayar={duzen.ayarlar.departman} admin={!!me?.admin} baslik="Departman durumu"
           ilkMi={duzen.sirali(SPEC_BOLUMLER)[0]?.key==="departman"} sonMu={duzen.sirali(SPEC_BOLUMLER).slice(-1)[0]?.key==="departman"}
           onTasiYukari={()=>duzen.tasi(SPEC_BOLUMLER,"departman",-1,me?.ad_soyad)} onTasiAsagi={()=>duzen.tasi(SPEC_BOLUMLER,"departman",1,me?.ad_soyad)}
-          onGizleGoster={(g)=>duzen.gizleGoster("departman",g,me?.ad_soyad)} onEmoji={(e)=>duzen.emojiAyarla("departman",e,me?.ad_soyad)} onRenk={(r)=>duzen.renkAyarla("departman",r,me?.ad_soyad)}>
+          onGizleGoster={(g)=>duzen.gizleGoster("departman",g,me?.ad_soyad)} onKaydet={(a)=>duzen.toplukaydet("departman",a,me?.ad_soyad)}>
         <div style={{order: duzen.ayarlar.departman?.sira ?? 3}}>
         <section>
           <div onClick={()=>secToggle("departman")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
@@ -811,7 +811,7 @@ export default function Spec({ params }) {
         <Bolum bolumKey="kritik" ayar={duzen.ayarlar.kritik} admin={!!me?.admin} baslik="Kritik konular / Uyarılar"
           ilkMi={duzen.sirali(SPEC_BOLUMLER)[0]?.key==="kritik"} sonMu={duzen.sirali(SPEC_BOLUMLER).slice(-1)[0]?.key==="kritik"}
           onTasiYukari={()=>duzen.tasi(SPEC_BOLUMLER,"kritik",-1,me?.ad_soyad)} onTasiAsagi={()=>duzen.tasi(SPEC_BOLUMLER,"kritik",1,me?.ad_soyad)}
-          onGizleGoster={(g)=>duzen.gizleGoster("kritik",g,me?.ad_soyad)} onEmoji={(e)=>duzen.emojiAyarla("kritik",e,me?.ad_soyad)} onRenk={(r)=>duzen.renkAyarla("kritik",r,me?.ad_soyad)}>
+          onGizleGoster={(g)=>duzen.gizleGoster("kritik",g,me?.ad_soyad)} onKaydet={(a)=>duzen.toplukaydet("kritik",a,me?.ad_soyad)}>
         <div style={{order: duzen.ayarlar.kritik?.sira ?? 4}}>
         <section style={{marginTop:16, border: alarmlar.length>0 ? "1px solid #d1352b" : undefined, background: alarmlar.length>0 ? "#fff5f4" : undefined}}>
           <div onClick={()=>secToggle("kritik")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>

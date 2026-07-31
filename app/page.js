@@ -298,8 +298,7 @@ export default function Dashboard() {
               onTasiYukari={() => duzen.tasi(ANA_BOLUMLER, b.key, -1, me?.ad_soyad)}
               onTasiAsagi={() => duzen.tasi(ANA_BOLUMLER, b.key, 1, me?.ad_soyad)}
               onGizleGoster={(g) => duzen.gizleGoster(b.key, g, me?.ad_soyad)}
-              onEmoji={(e) => duzen.emojiAyarla(b.key, e, me?.ad_soyad)}
-              onRenk={(r) => duzen.renkAyarla(b.key, r, me?.ad_soyad)}
+              onKaydet={(alanlar) => duzen.toplukaydet(b.key, alanlar, me?.ad_soyad)}
             >
               {icerikler[b.key]}
             </Bolum>

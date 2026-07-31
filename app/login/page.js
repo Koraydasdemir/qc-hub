@@ -27,6 +27,7 @@ export default function Login() {
       <form onSubmit={giris} style={{background:"#fff",borderRadius:18,padding:"34px 40px 30px",width:340,
         boxShadow:"0 20px 60px rgba(0,0,0,.35)"}}>
         <div style={{textAlign:"center",marginBottom:22}}>
+          <img src="/logo.png" alt="TECHMP" style={{height:52,marginBottom:12}}/>
           <div style={{fontSize:22,fontWeight:700,color:"#16304f",letterSpacing:.4}}>Proje Yönetim Sistemi</div>
           <div style={{fontSize:12,color:"#8b94a4",marginTop:2}}>TECHMP Mühendislik</div>
         </div>
