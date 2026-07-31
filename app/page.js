@@ -35,6 +35,8 @@ export default function Dashboard() {
   const [tedFiltre, setTedFiltre] = useState("");
   const [asamaFiltre, setAsamaFiltre] = useState("");
   const [projeAra, setProjeAra] = useState("");
+  const [secAcik, setSecAcik] = useState({ secim:true, duyurular:true, "dept-loglari":true, projeler:true, "son-belgeler":true });
+  function secToggle(k) { setSecAcik({ ...secAcik, [k]: !secAcik[k] }); }
   const duzen = useDuzen("ana-ekran");
 
   useEffect(() => {
@@ -160,8 +162,12 @@ export default function Dashboard() {
           const icerikler = {
             secim: (
               <div className="buyuk" style={{background:"var(--card)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:"38px 42px",boxShadow:"var(--shadow)",marginTop:16}}>
-                <h2 style={{marginTop:0,fontSize:25}}>{duzen.ayarlar.secim?.emoji ? duzen.ayarlar.secim.emoji+" " : ""}Tedarikçi &amp; Spesifikasyon Seçimi</h2>
-                <p style={{fontSize:15,color:"var(--ink2)",marginTop:-4}}>Sistemin giriş noktası — {katalog.length} spesifikasyonun tamamı burada. Tedarikçiyi ve spesifikasyonu seçerek ilgili ekrana geçin.</p>
+                <div onClick={()=>secToggle("secim")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+                  <h2 style={{margin:0,fontSize:25}}>{duzen.ayarlar.secim?.emoji ? duzen.ayarlar.secim.emoji+" " : ""}Tedarikçi &amp; Spesifikasyon Seçimi</h2>
+                  <span style={{fontSize:14,color:"var(--ink3)"}}>{secAcik.secim ? "▲ Kapat" : "▼ Aç"}</span>
+                </div>
+                {secAcik.secim && <>
+                <p style={{fontSize:15,color:"var(--ink2)",marginTop:8}}>Sistemin giriş noktası — {katalog.length} spesifikasyonun tamamı burada. Tedarikçiyi ve spesifikasyonu seçerek ilgili ekrana geçin.</p>
                 <div style={{display:"flex",gap:22,flexWrap:"wrap",alignItems:"flex-end",marginTop:16}}>
                   <div style={{flex:1,minWidth:260}}>
                     <label style={{fontSize:14.5,color:"#586173",fontWeight:600}}>1 · Tedarikçi</label><br/>
@@ -184,12 +190,16 @@ export default function Dashboard() {
                     Spesifikasyon detayları →
                   </button>
                 </div>
+                </>}
               </div>
             ),
             duyurular: duyurular.length > 0 && (
               <section>
-                <h2>{duzen.ayarlar.duyurular?.emoji || "📢"} Önemli duyurular</h2>
-                {duyurular.map(d => (
+                <div onClick={()=>secToggle("duyurular")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+                  <h2 style={{margin:0}}>{duzen.ayarlar.duyurular?.emoji || "📢"} Önemli duyurular</h2>
+                  <span style={{fontSize:13,color:"var(--ink3)"}}>{secAcik.duyurular ? "▲ Kapat" : "▼ Aç"}</span>
+                </div>
+                {secAcik.duyurular && duyurular.map(d => (
                   <div key={d.id} className={"duyuru"+(d.onemli?" onemli":"")}>
                     <b>{d.baslik}</b>
                     <p>{d.metin}</p>
@@ -200,7 +210,11 @@ export default function Dashboard() {
             ),
             "dept-loglari": (
               <section style={{marginTop:16}}>
-                <h2>{duzen.ayarlar["dept-loglari"]?.emoji ? duzen.ayarlar["dept-loglari"].emoji+" " : ""}Departman logları</h2>
+                <div onClick={()=>secToggle("dept-loglari")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+                  <h2 style={{margin:0}}>{duzen.ayarlar["dept-loglari"]?.emoji ? duzen.ayarlar["dept-loglari"].emoji+" " : ""}Departman logları</h2>
+                  <span style={{fontSize:13,color:"var(--ink3)"}}>{secAcik["dept-loglari"] ? "▲ Kapat" : "▼ Aç"}</span>
+                </div>
+                {secAcik["dept-loglari"] && <>
                 {mesajLog && <div style={{fontSize:13,color: mesajLog.startsWith("Hata")?"#b3261e":"var(--ink2)",marginBottom:8}}>{mesajLog}</div>}
                 <div className="grid">
                   {Object.values(deptGrup).map(({dep, loglar: dl}) => (
@@ -230,12 +244,17 @@ export default function Dashboard() {
                     </div>
                   ))}
                 </div>
+                </>}
               </section>
             ),
             projeler: (
               <section>
-                <h2>{duzen.ayarlar.projeler?.emoji ? duzen.ayarlar.projeler.emoji+" " : ""}Projeler</h2>
-                <div style={{display:"flex",gap:10,margin:"0 0 14px",flexWrap:"wrap",alignItems:"center"}}>
+                <div onClick={()=>secToggle("projeler")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+                  <h2 style={{margin:0}}>{duzen.ayarlar.projeler?.emoji ? duzen.ayarlar.projeler.emoji+" " : ""}Projeler</h2>
+                  <span style={{fontSize:13,color:"var(--ink3)"}}>{secAcik.projeler ? "▲ Kapat" : "▼ Aç"}</span>
+                </div>
+                {secAcik.projeler && <>
+                <div style={{display:"flex",gap:10,margin:"14px 0 14px",flexWrap:"wrap",alignItems:"center"}}>
                   <select value={tedFiltre} onChange={e=>setTedFiltre(e.target.value)} style={{padding:"9px 12px",border:"1px solid #cbd3de",borderRadius:10,fontSize:13.5}}>
                     <option value="">Tüm tedarikçiler</option>
                     {tedarikcilerProje.map(t => <option key={t} value={t}>{t}</option>)}
@@ -258,12 +277,16 @@ export default function Dashboard() {
                   ))}
                   {projelerGosterilen.length===0 && <div style={{fontSize:13,color:"var(--ink3)"}}>Filtreye uyan proje yok.</div>}
                 </div>
+                </>}
               </section>
             ),
             "son-belgeler": belgeler.length > 0 && (
               <section style={{marginTop:20}}>
-                <h2>{duzen.ayarlar["son-belgeler"]?.emoji ? duzen.ayarlar["son-belgeler"].emoji+" " : ""}Son belgeler</h2>
-                <table>
+                <div onClick={()=>secToggle("son-belgeler")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+                  <h2 style={{margin:0}}>{duzen.ayarlar["son-belgeler"]?.emoji ? duzen.ayarlar["son-belgeler"].emoji+" " : ""}Son belgeler</h2>
+                  <span style={{fontSize:13,color:"var(--ink3)"}}>{secAcik["son-belgeler"] ? "▲ Kapat" : "▼ Aç"}</span>
+                </div>
+                {secAcik["son-belgeler"] && <table>
                   <thead><tr><th>Belge</th><th>Tür</th><th>Tespit eden</th><th>Durum</th></tr></thead>
                   <tbody>
                     {belgeler.map(b => (
@@ -275,7 +298,7 @@ export default function Dashboard() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table>}
               </section>
             ),
           };
