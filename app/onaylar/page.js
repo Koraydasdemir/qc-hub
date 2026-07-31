@@ -79,6 +79,13 @@ export default function Onaylar() {
     if (!error) await yukleVeri(me?.admin, me?.ad_soyad);
   }
 
+  async function talepSil(t) {
+    if (!confirm("Bu onay talebini silmek istediğinize emin misiniz?")) return;
+    const { error } = await supabase.from("approval_requests").delete().eq("id", t.id);
+    if (error) { setMesaj("Hata: " + error.message); return; }
+    await yukleVeri(me?.admin, me?.ad_soyad);
+  }
+
   if (yukle) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--ink3)",fontSize:14}}>Yükleniyor...</div>;
 
   return (
@@ -107,7 +114,7 @@ export default function Onaylar() {
                 <select value={form.hedef_kisi} onChange={e=>setForm({...form,hedef_kisi:e.target.value})}
                   style={{width:"100%",marginTop:4,padding:"9px 11px",border:"1px solid #cbd3de",borderRadius:9,fontSize:13.5}}>
                   <option value="">Seçiniz...</option>
-                  {profilList.map(pf=><option key={pf.ad_soyad} value={pf.ad_soyad}>{pf.ad_soyad}</option>)}
+                  {profilList.filter(pf=>pf.ad_soyad!==me?.ad_soyad).map(pf=><option key={pf.ad_soyad} value={pf.ad_soyad}>{pf.ad_soyad}</option>)}
                 </select>
               </div>
               <div>
@@ -152,48 +159,77 @@ export default function Onaylar() {
           </section>
         )}
 
-        <section style={{padding:0,overflow:"hidden"}}>
-          <table>
-            <thead><tr><th></th><th>Onay metni</th><th>Gönderilen</th><th>Talep eden</th><th>Talep tarihi</th><th>Onay tarihi</th><th>Belge</th><th>Durum</th><th></th></tr></thead>
-            <tbody>
-              {[...talepler].sort((a,b) => {
-                const benimA = me && (a.hedef_kisi===me.ad_soyad || a.talep_eden===me.ad_soyad) ? 0 : 1;
-                const benimB = me && (b.hedef_kisi===me.ad_soyad || b.talep_eden===me.ad_soyad) ? 0 : 1;
-                return benimA - benimB;
-              }).map(t => {
-                const kararYetkili = me && (me.admin || t.hedef_kisi === me.ad_soyad);
-                const banaGonderildi = me && t.hedef_kisi === me.ad_soyad;
-                const benimTalebim = me && t.talep_eden === me.ad_soyad;
-                return (
-                  <tr key={t.id} style={{background: (banaGonderildi||benimTalebim) ? "#f6faff" : undefined}}>
-                    <td>
-                      {banaGonderildi && <span className="pill" style={{background:"#e7f0fb",color:"#0c447c",fontSize:10.5}} title="Karar sizden bekleniyor / size gönderildi">Size</span>}
-                      {benimTalebim && <span className="pill" style={{background:"#fdeee0",color:"#a9541a",fontSize:10.5,marginLeft:4}} title="Bu talebi siz açtınız">Talebiniz</span>}
-                    </td>
-                    <td style={{maxWidth:260,fontSize:12.5}}>{t.metin}</td>
-                    <td style={{fontSize:12.5,whiteSpace:"nowrap"}}>{t.hedef_kisi}</td>
-                    <td style={{fontSize:12.5,whiteSpace:"nowrap"}}>{t.talep_eden || "—"}</td>
-                    <td style={{fontSize:12,whiteSpace:"nowrap"}}>{t.talep_tarihi || "—"}</td>
-                    <td style={{fontSize:12,whiteSpace:"nowrap"}}>{t.onay_tarihi || "—"}</td>
-                    <td>{t.dosya_url ? <a href={t.dosya_url} target="_blank" rel="noreferrer">📎</a> : "—"}</td>
-                    <td><span className="pill" style={{
-                      background: t.durum==="onaylandı"?"#e4f4ee":t.durum==="reddedildi"?"#fbe9e8":"#fbf0dc",
-                      color: t.durum==="onaylandı"?"#0f7a5f":t.durum==="reddedildi"?"#b3261e":"#a9721a"}}>{t.durum}</span></td>
-                    <td>
-                      {t.durum==="bekliyor" && kararYetkili && (
-                        <div style={{display:"flex",gap:6}}>
-                          <button onClick={()=>talepKarar(t,true)} className="arac-btn" style={{background:"#0f7a5f",fontSize:11,padding:"5px 10px"}}>Onayla</button>
-                          <button onClick={()=>talepKarar(t,false)} style={{fontSize:11,padding:"5px 10px",border:"1px solid #cbd3de",borderRadius:7,background:"#fff",cursor:"pointer"}}>Reddet</button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-              {talepler.length===0 && <tr><td colSpan={9} style={{padding:16,color:"var(--ink3)",fontSize:13}}>Onay talebi yok.</td></tr>}
-            </tbody>
-          </table>
-        </section>
+        {(() => {
+          const bekleyenler = talepler.filter(t => t.durum === "bekliyor");
+          const arsiv = talepler.filter(t => t.durum !== "bekliyor" && me && (me.admin || t.talep_eden===me.ad_soyad || t.hedef_kisi===me.ad_soyad));
+          const satirRender = (t) => {
+            // Kendi gönderdiği talebi kendisi onaylayamaz — karar hakkı sadece hedef kişide,
+            // admin ise yalnızca kendi göndermediği taleplerde yedek onaylayıcı olarak devreye girebilir.
+            const kararYetkili = me && ((t.hedef_kisi === me.ad_soyad) || (me.admin && t.talep_eden !== me.ad_soyad));
+            const silYetkili = me && (me.admin || t.talep_eden === me.ad_soyad);
+            const banaGonderildi = me && t.hedef_kisi === me.ad_soyad;
+            const benimTalebim = me && t.talep_eden === me.ad_soyad;
+            return (
+              <tr key={t.id} style={{background: (banaGonderildi||benimTalebim) ? "#f6faff" : undefined}}>
+                <td>
+                  {banaGonderildi && <span className="pill" style={{background:"#e7f0fb",color:"#0c447c",fontSize:10.5}} title="Karar sizden bekleniyor / size gönderildi">Size</span>}
+                  {benimTalebim && <span className="pill" style={{background:"#fdeee0",color:"#a9541a",fontSize:10.5,marginLeft:4}} title="Bu talebi siz açtınız">Talebiniz</span>}
+                </td>
+                <td style={{maxWidth:260,fontSize:12.5}}>{t.metin}</td>
+                <td style={{fontSize:12.5,whiteSpace:"nowrap"}}>{t.hedef_kisi}</td>
+                <td style={{fontSize:12.5,whiteSpace:"nowrap"}}>{t.talep_eden || "—"}</td>
+                <td style={{fontSize:12,whiteSpace:"nowrap"}}>{t.talep_tarihi || "—"}</td>
+                <td style={{fontSize:12,whiteSpace:"nowrap"}}>{t.onay_tarihi || "—"}</td>
+                <td>{t.dosya_url ? <a href={t.dosya_url} target="_blank" rel="noreferrer">📎</a> : "—"}</td>
+                <td><span className="pill" style={{
+                  background: t.durum==="onaylandı"?"#e4f4ee":t.durum==="reddedildi"?"#fbe9e8":"#fbf0dc",
+                  color: t.durum==="onaylandı"?"#0f7a5f":t.durum==="reddedildi"?"#b3261e":"#a9721a"}}>{t.durum}</span></td>
+                <td>
+                  <div style={{display:"flex",gap:6}}>
+                    {t.durum==="bekliyor" && kararYetkili && (
+                      <>
+                        <button onClick={()=>talepKarar(t,true)} className="arac-btn" style={{background:"#0f7a5f",fontSize:11,padding:"5px 10px"}}>Onayla</button>
+                        <button onClick={()=>talepKarar(t,false)} style={{fontSize:11,padding:"5px 10px",border:"1px solid #cbd3de",borderRadius:7,background:"#fff",cursor:"pointer"}}>Reddet</button>
+                      </>
+                    )}
+                    {silYetkili && (
+                      <button onClick={()=>talepSil(t)} title="Sil" style={{fontSize:11,padding:"5px 8px",border:"1px solid #f0b9b5",color:"#b3261e",borderRadius:7,background:"#fff",cursor:"pointer"}}>🗑</button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            );
+          };
+          return (
+            <>
+              <section style={{padding:0,overflow:"hidden"}}>
+                <table>
+                  <thead><tr><th></th><th>Onay metni</th><th>Gönderilen</th><th>Talep eden</th><th>Talep tarihi</th><th>Onay tarihi</th><th>Belge</th><th>Durum</th><th></th></tr></thead>
+                  <tbody>
+                    {[...bekleyenler].sort((a,b) => {
+                      const benimA = me && (a.hedef_kisi===me.ad_soyad || a.talep_eden===me.ad_soyad) ? 0 : 1;
+                      const benimB = me && (b.hedef_kisi===me.ad_soyad || b.talep_eden===me.ad_soyad) ? 0 : 1;
+                      return benimA - benimB;
+                    }).map(satirRender)}
+                    {bekleyenler.length===0 && <tr><td colSpan={9} style={{padding:16,color:"var(--ink3)",fontSize:13}}>Bekleyen onay talebi yok.</td></tr>}
+                  </tbody>
+                </table>
+              </section>
+
+              <h2 style={{marginTop:24}}>📁 Onay arşivi</h2>
+              <p style={{color:"var(--ink2)",fontSize:13,marginTop:-8}}>Karara bağlanmış talepler — yalnızca admin, talebi gönderen ve talebi alan kişi görebilir.</p>
+              <section style={{padding:0,overflow:"hidden"}}>
+                <table>
+                  <thead><tr><th></th><th>Onay metni</th><th>Gönderilen</th><th>Talep eden</th><th>Talep tarihi</th><th>Onay tarihi</th><th>Belge</th><th>Durum</th><th></th></tr></thead>
+                  <tbody>
+                    {arsiv.map(satirRender)}
+                    {arsiv.length===0 && <tr><td colSpan={9} style={{padding:16,color:"var(--ink3)",fontSize:13}}>Arşivde talep yok.</td></tr>}
+                  </tbody>
+                </table>
+              </section>
+            </>
+          );
+        })()}
 
         {me?.admin && (
           <>
