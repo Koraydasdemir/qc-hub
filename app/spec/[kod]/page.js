@@ -5,13 +5,7 @@ import { supabase } from "../../../lib/supabase";
 import Ust from "../../../components/Ust";
 import Bolum from "../../../components/Bolum";
 import { useDuzen } from "../../../lib/duzen";
-
-const SPEC_BOLUMLER = [
-  { key: "isakisi", ad: "İş akışı", varsayilanSira: 1 },
-  { key: "roadmap", ad: "Project Roadmap / Üretim-İmalat", varsayilanSira: 2 },
-  { key: "departman", ad: "Departman durumu", varsayilanSira: 3 },
-  { key: "kritik", ad: "Kritik konular / Uyarılar", varsayilanSira: 4 },
-];
+import { SPEC_BOLUMLER } from "../../../lib/bolumler";
 
 const DEPT_AD = {"01":"Kalite Kontrol","02":"Finance","03":"Accounting","04":"Technical Office",
   "05":"Procurement","06":"Legal Affairs","07":"Logistics & Customs","08":"Administrative"};
