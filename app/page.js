@@ -159,28 +159,28 @@ export default function Dashboard() {
           const sirali = duzen.sirali(ANA_BOLUMLER);
           const icerikler = {
             secim: (
-              <div className="buyuk" style={{background:"var(--card)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:"28px 30px",boxShadow:"var(--shadow)",marginTop:16}}>
-                <h2 style={{marginTop:0,fontSize:19}}>{duzen.ayarlar.secim?.emoji ? duzen.ayarlar.secim.emoji+" " : ""}Tedarikçi &amp; Spesifikasyon Seçimi</h2>
-                <p style={{fontSize:13.5,color:"var(--ink2)",marginTop:-4}}>Sistemin giriş noktası — {katalog.length} spesifikasyonun tamamı burada. Tedarikçiyi ve spesifikasyonu seçerek ilgili ekrana geçin.</p>
-                <div style={{display:"flex",gap:18,flexWrap:"wrap",alignItems:"flex-end",marginTop:10}}>
-                  <div style={{flex:1,minWidth:220}}>
-                    <label style={{fontSize:13,color:"#586173",fontWeight:600}}>1 · Tedarikçi</label><br/>
+              <div className="buyuk" style={{background:"var(--card)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:"38px 42px",boxShadow:"var(--shadow)",marginTop:16}}>
+                <h2 style={{marginTop:0,fontSize:25}}>{duzen.ayarlar.secim?.emoji ? duzen.ayarlar.secim.emoji+" " : ""}Tedarikçi &amp; Spesifikasyon Seçimi</h2>
+                <p style={{fontSize:15,color:"var(--ink2)",marginTop:-4}}>Sistemin giriş noktası — {katalog.length} spesifikasyonun tamamı burada. Tedarikçiyi ve spesifikasyonu seçerek ilgili ekrana geçin.</p>
+                <div style={{display:"flex",gap:22,flexWrap:"wrap",alignItems:"flex-end",marginTop:16}}>
+                  <div style={{flex:1,minWidth:260}}>
+                    <label style={{fontSize:14.5,color:"#586173",fontWeight:600}}>1 · Tedarikçi</label><br/>
                     <select value={secTed} onChange={e=>{setSecTed(e.target.value); setSecSpec("");}}
-                      style={{width:"100%",marginTop:7,padding:"14px 15px",border:"1px solid #cbd3de",borderRadius:10,fontSize:15.5}}>
+                      style={{width:"100%",marginTop:8,padding:"18px 18px",border:"1px solid #cbd3de",borderRadius:12,fontSize:18}}>
                       <option value="">Seçiniz...</option>
                       {tedarikciler.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
-                  <div style={{flex:2,minWidth:320}}>
-                    <label style={{fontSize:13,color:"#586173",fontWeight:600}}>2 · Spesifikasyon</label><br/>
+                  <div style={{flex:2,minWidth:360}}>
+                    <label style={{fontSize:14.5,color:"#586173",fontWeight:600}}>2 · Spesifikasyon</label><br/>
                     <select value={secSpec} onChange={e=>setSecSpec(e.target.value)} disabled={!secTed}
-                      style={{width:"100%",marginTop:7,padding:"14px 15px",border:"1px solid #cbd3de",borderRadius:10,fontSize:15.5}}>
+                      style={{width:"100%",marginTop:8,padding:"18px 18px",border:"1px solid #cbd3de",borderRadius:12,fontSize:18}}>
                       <option value="">{secTed ? "Seçiniz..." : "Önce tedarikçi seçin"}</option>
                       {specSecenekleri.map(k => <option key={k.id} value={k.id}>Spec {k.spec_no} — {k.proje_adi} ({k.durum})</option>)}
                     </select>
                   </div>
                   <button className="arac-btn" disabled={!secSpec} onClick={specAc}
-                    style={{padding:"15px 28px",fontSize:15.5,opacity: secSpec?1:.5,cursor: secSpec?"pointer":"not-allowed"}}>
+                    style={{padding:"19px 34px",fontSize:18,opacity: secSpec?1:.5,cursor: secSpec?"pointer":"not-allowed"}}>
                     Spesifikasyon detayları →
                   </button>
                 </div>
