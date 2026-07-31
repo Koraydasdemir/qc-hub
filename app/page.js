@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import Ust from "../components/Ust";
 import Bolum from "../components/Bolum";
-import { useDuzen, bolumYetkilileriGetir } from "../lib/duzen";
+import { useDuzen } from "../lib/duzen";
 import { ANA_BOLUMLER } from "../lib/bolumler";
 
 function pazartesi() {
@@ -35,14 +35,13 @@ export default function Dashboard() {
   const [tedFiltre, setTedFiltre] = useState("");
   const [asamaFiltre, setAsamaFiltre] = useState("");
   const [projeAra, setProjeAra] = useState("");
-  const [bolumYetkilileri, setBolumYetkilileri] = useState([]);
   const duzen = useDuzen("ana-ekran");
 
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push("/login"); return; }
-      const [{ data: pr }, { data: dy }, { data: bg }, { data: prof }, { data: dep }, { data: lg }, { data: kat }, by] = await Promise.all([
+      const [{ data: pr }, { data: dy }, { data: bg }, { data: prof }, { data: dep }, { data: lg }, { data: kat }] = await Promise.all([
         supabase.from("projects").select("kod,ad,spec_no,asama,bedel,katalog_id,suppliers(kod,ad)").order("id"),
         supabase.from("announcements").select("*").order("onemli",{ascending:false}).order("id",{ascending:false}),
         supabase.from("documents").select("kod,tur,tespit_eden,durum,created_at").order("id",{ascending:false}).limit(8),
@@ -50,7 +49,6 @@ export default function Dashboard() {
         supabase.from("departments").select("*").order("kod"),
         supabase.from("department_logs").select("*").order("dept_kod").order("log_adi"),
         supabase.from("specs_katalog").select("id,tedarikci,spec_no,proje_adi,durum").order("tedarikci").order("id"),
-        bolumYetkilileriGetir("ana-ekran"),
       ]);
       if (prof?.admin) {
         setAdmin(true);
@@ -59,7 +57,6 @@ export default function Dashboard() {
       }
       setMe(prof || null);
       setProjeler(pr || []); setDuyurular(dy || []); setBelgeler(bg || []); setDepler(dep || []); setLoglar(lg || []); setKatalog(kat || []);
-      setBolumYetkilileri(by || []);
       try { setKapali(JSON.parse(localStorage.getItem("qc_bil_kapali") || "[]")); } catch (e) {}
       setYukle(false);
     })();
@@ -115,8 +112,7 @@ export default function Dashboard() {
     if (error) { setMesajLog("Hata: " + error.message); return; }
     setAdBaslik({ ...adBaslik, [dep.kod]: "" }); setMesajLog(""); await yukleVeri();
   }
-  const dosyaYuklemeYetkili = (dk) => admin || me?.dept_kod === dk ||
-    bolumYetkilileri.some(y => y.bolum_key === "dept-loglari" && y.ad_soyad === me?.ad_soyad);
+  const dosyaYuklemeYetkili = (dk) => admin || me?.dept_kod === dk;
 
   const tedarikcilerProje = [...new Set(projeler.map(p => p.suppliers?.ad).filter(Boolean))].sort();
   const asamalarProje = [...new Set(projeler.map(p => p.asama).filter(Boolean))].sort();
