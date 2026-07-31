@@ -117,12 +117,22 @@ export default function Onaylar() {
 
         <section style={{padding:0,overflow:"hidden"}}>
           <table>
-            <thead><tr><th>Onay metni</th><th>Gönderilen</th><th>Talep eden</th><th>Talep tarihi</th><th>Onay tarihi</th><th>Belge</th><th>Durum</th><th></th></tr></thead>
+            <thead><tr><th></th><th>Onay metni</th><th>Gönderilen</th><th>Talep eden</th><th>Talep tarihi</th><th>Onay tarihi</th><th>Belge</th><th>Durum</th><th></th></tr></thead>
             <tbody>
-              {talepler.map(t => {
+              {[...talepler].sort((a,b) => {
+                const benimA = me && (a.hedef_kisi===me.ad_soyad || a.talep_eden===me.ad_soyad) ? 0 : 1;
+                const benimB = me && (b.hedef_kisi===me.ad_soyad || b.talep_eden===me.ad_soyad) ? 0 : 1;
+                return benimA - benimB;
+              }).map(t => {
                 const kararYetkili = me && (me.admin || t.hedef_kisi === me.ad_soyad);
+                const banaGonderildi = me && t.hedef_kisi === me.ad_soyad;
+                const benimTalebim = me && t.talep_eden === me.ad_soyad;
                 return (
-                  <tr key={t.id}>
+                  <tr key={t.id} style={{background: (banaGonderildi||benimTalebim) ? "#f6faff" : undefined}}>
+                    <td>
+                      {banaGonderildi && <span className="pill" style={{background:"#e7f0fb",color:"#0c447c",fontSize:10.5}} title="Karar sizden bekleniyor / size gönderildi">Size</span>}
+                      {benimTalebim && <span className="pill" style={{background:"#fdeee0",color:"#a9541a",fontSize:10.5,marginLeft:4}} title="Bu talebi siz açtınız">Talebiniz</span>}
+                    </td>
                     <td style={{maxWidth:260,fontSize:12.5}}>{t.metin}</td>
                     <td style={{fontSize:12.5,whiteSpace:"nowrap"}}>{t.hedef_kisi}</td>
                     <td style={{fontSize:12.5,whiteSpace:"nowrap"}}>{t.talep_eden || "—"}</td>
@@ -143,7 +153,7 @@ export default function Onaylar() {
                   </tr>
                 );
               })}
-              {talepler.length===0 && <tr><td colSpan={8} style={{padding:16,color:"var(--ink3)",fontSize:13}}>Onay talebi yok.</td></tr>}
+              {talepler.length===0 && <tr><td colSpan={9} style={{padding:16,color:"var(--ink3)",fontSize:13}}>Onay talebi yok.</td></tr>}
             </tbody>
           </table>
         </section>

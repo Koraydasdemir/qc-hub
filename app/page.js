@@ -52,11 +52,18 @@ export default function Dashboard() {
         supabase.from("department_logs").select("*").order("dept_kod").order("log_adi"),
         supabase.from("specs_katalog").select("id,tedarikci,spec_no,proje_adi,durum").order("tedarikci").order("id"),
       ]);
+      let bek = 0;
       if (prof?.admin) {
         setAdmin(true);
         const { count } = await supabase.from("payment_gates").select("id",{count:"exact",head:true}).eq("durum","dekont yüklendi");
-        setBekleyen(count || 0);
+        bek += count || 0;
       }
+      if (prof?.ad_soyad) {
+        const { count: kisiBek } = await supabase.from("approval_requests").select("id",{count:"exact",head:true})
+          .eq("hedef_kisi", prof.ad_soyad).eq("durum","bekliyor");
+        bek += kisiBek || 0;
+      }
+      setBekleyen(bek);
       setMe(prof || null);
       setProjeler(pr || []); setDuyurular(dy || []); setBelgeler(bg || []); setDepler(dep || []); setLoglar(lg || []); setKatalog(kat || []);
       try { setKapali(JSON.parse(localStorage.getItem("qc_bil_kapali") || "[]")); } catch (e) {}
