@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase, KULLANICI_EPOSTA } from "../../lib/supabase";
+import OrnekLogo from "../../components/OrnekLogo";
 
 export default function Login() {
   const router = useRouter();
@@ -32,8 +33,7 @@ export default function Login() {
       <form onSubmit={giris} style={{background:"#fff",borderRadius:18,padding:"34px 40px 30px",width:340,
         boxShadow:"0 20px 60px rgba(0,0,0,.35)"}}>
         <div style={{textAlign:"center",marginBottom:22}}>
-          <div style={{width:52,height:52,margin:"0 auto 12px",borderRadius:12,background:"#16304f",color:"#fff",
-            display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:20,letterSpacing:.5}}>ÖM</div>
+          <div style={{margin:"0 auto 12px",width:52,height:52}}><OrnekLogo size={52}/></div>
           <div style={{fontSize:22,fontWeight:700,color:"#16304f",letterSpacing:.4}}>Proje Yönetim Sistemi</div>
           <div style={{fontSize:12,color:"#8b94a4",marginTop:2}}>Örnek Mühendislik (Demo)</div>
         </div>

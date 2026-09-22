@@ -4,16 +4,17 @@ import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { useDuzenMod } from "./DuzenBaglam";
 import { tumunuYedekle, yedekleriGetir, yedektenGeriYukle } from "../lib/duzen";
+import OrnekLogo from "./OrnekLogo";
 
 const DEPARTMANLAR = [
   { kod: "01", ad: "Kalite Kontrol ve Proje Yönetimi" },
-  { kod: "02", ad: "Finance" },
-  { kod: "03", ad: "Accounting" },
-  { kod: "04", ad: "Technical Office" },
-  { kod: "05", ad: "Procurement" },
-  { kod: "06", ad: "Legal Affairs" },
-  { kod: "07", ad: "Logistics & Customs" },
-  { kod: "08", ad: "Administrative & Personnel" },
+  { kod: "02", ad: "Finans" },
+  { kod: "03", ad: "Muhasebe" },
+  { kod: "04", ad: "Teknik Ofis" },
+  { kod: "05", ad: "Satın Alma" },
+  { kod: "06", ad: "Hukuk İşleri" },
+  { kod: "07", ad: "Lojistik ve Gümrük" },
+  { kod: "08", ad: "İdari ve Personel İşleri" },
 ];
 
 export default function Ust() {
@@ -79,8 +80,7 @@ export default function Ust() {
       <div className="ust">
         <a href="/" style={{ textDecoration: "none", color: "#fff" }}>
           <div className="logo">
-            <div style={{width:36,height:36,borderRadius:9,background:"rgba(255,255,255,.15)",color:"#fff",
-              display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14}}>ÖM</div>
+            <div style={{width:36,height:36}}><OrnekLogo size={36}/></div>
             <div>
               <b>Örnek Mühendislik · Proje Yönetim Sistemi (Demo)</b>
             </div>
