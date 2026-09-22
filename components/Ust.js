@@ -79,9 +79,10 @@ export default function Ust() {
       <div className="ust">
         <a href="/" style={{ textDecoration: "none", color: "#fff" }}>
           <div className="logo">
-            <img src="/logo.png" alt="TECHMP" />
+            <div style={{width:36,height:36,borderRadius:9,background:"rgba(255,255,255,.15)",color:"#fff",
+              display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14}}>ÖM</div>
             <div>
-              <b>TECHMP Mühendislik · Proje Yönetim Sistemi</b>
+              <b>Örnek Mühendislik · Proje Yönetim Sistemi (Demo)</b>
             </div>
           </div>
         </a>

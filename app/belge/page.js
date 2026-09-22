@@ -97,10 +97,10 @@ export default function BelgeHazirla() {
     setBekle(true); setDurum("Belge oluşturuluyor...");
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const { data: techmp } = await supabase.from("projects").select("id").eq("kod","TECHMP").single();
+      const { data: techmp } = await supabase.from("projects").select("id").eq("kod","ORNEK").single();
       const { data: no, error: noErr } = await supabase.rpc("sonraki_belge_no", { pid: techmp.id, t: tur });
       if (noErr) throw noErr;
-      const kod = "TECHMP-" + (tur === "NCR" ? "NCR" : "DOF") + "-" + no;
+      const kod = "ORNEK-" + (tur === "NCR" ? "NCR" : "DOF") + "-" + no;
 
       const urls = [];
       for (const f of fotolar) {

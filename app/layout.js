@@ -2,7 +2,7 @@ import "./globals.css";
 import { DuzenProvider } from "../components/DuzenBaglam";
 
 export const metadata = {
-  title: "Proje Yönetim Sistemi — TECHMP",
+  title: "Proje Yönetim Sistemi — Örnek Mühendislik (Demo)",
   description: "QC Hub Faz 2",
 };
 

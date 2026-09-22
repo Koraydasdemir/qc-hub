@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import Ust from "../../components/Ust";
 
-const tamAd = (no) => (no||"").replace(/^NCR\s*/i, "TECHMP-NCR-");
+const tamAd = (no) => (no||"").replace(/^NCR\s*/i, "ORNEK-NCR-");
 
 export default function Arsiv() {
   const router = useRouter();

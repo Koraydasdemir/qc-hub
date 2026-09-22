@@ -45,12 +45,12 @@ export default function BelgeGor({ params }) {
         <div className="form-kagit">
           <div className="form-bas">
             <div className="logo">
-              <b>TECHMP MÜHENDİSLİK</b>
+              <b>ÖRNEK MÜHENDİSLİK (DEMO)</b>
               <small>{turUzun}</small>
             </div>
             <div className="kod">
               <b>{d.kod}</b>
-              <small>DC-TCHMP-016</small>
+              <small>DC-ORNEK-016</small>
             </div>
           </div>
 

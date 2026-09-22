@@ -21,8 +21,8 @@ function pazartesi() {
 // tur: durum | metin | secim | odeme | dosya | dosya_haftalik | liste | ziyaret
 const WORKFLOW = [
   { key: "sozlesme", ad: "Contract", items: [
-    { key: "sozlesme_techmp_tedarikci", ad: "TECHMP – Supplier Spec No", tur: "metin" },
-    { key: "sozlesme_techmp_isveren", ad: "TECHMP – Employer Spec No", tur: "metin" },
+    { key: "sozlesme_techmp_tedarikci", ad: "Örnek Müh. – Supplier Spec No", tur: "metin" },
+    { key: "sozlesme_techmp_isveren", ad: "Örnek Müh. – Employer Spec No", tur: "metin" },
     { key: "sozlesme_durum", ad: "Status", tur: "secim", secenekler: ["Checking","Under Signature","Approved"] },
   ]},
   { key: "finans", ad: "Finance", items: [
